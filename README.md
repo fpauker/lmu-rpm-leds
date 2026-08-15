@@ -45,6 +45,18 @@ systemctl --user enable --now lmu-rpm-leds.service
 
 The service waits for the game by itself — it does not need LMU running to start.
 
+### Building a package
+
+`packaging/lmu-rpm-leds.spec` builds an RPM against a release tarball, which is
+what a Fedora COPR repository needs:
+
+```bash
+rpmbuild -ba packaging/lmu-rpm-leds.spec
+```
+
+The unit is not enabled by a preset — whether the LEDs get fed is the user's
+decision, and the app has a switch for it.
+
 ### Access to the wheelbase
 
 The base appears as a USB serial device (vendor `346e`, Gudsen) at
@@ -197,8 +209,9 @@ python3 /usr/share/lmu-rpm-leds/led_map.py      # which bit maps to which LED
 ```
 
 `verify_protocol.py` in the repository compares every generated frame against
-boxflat's own encoder. It is a development tool, not part of the package: it
-needs PyYAML and boxflat installed as a Flatpak.
+boxflat's own encoder. It is a development tool and not part of the package,
+because it needs boxflat installed as a Flatpak — it reads the protocol
+definitions straight out of that installation.
 
 ## Not planned: Flathub
 

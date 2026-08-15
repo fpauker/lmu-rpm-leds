@@ -18,8 +18,10 @@ ICONDIR      = $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps
 MODULES      = lmu_rpm_leds.py lmu_led_config.py moza.py config.py \
                service.py ledview.py
 # Shipped for troubleshooting. verify_protocol.py stays out of the package on
-# purpose: it needs PyYAML and a boxflat Flatpak, which no user should have to
-# install to run the daemon.
+# purpose: it compares against boxflat's own encoder and therefore needs boxflat
+# installed as a Flatpak, which no user should have to do to run the daemon.
+# (It needs no PyYAML of its own — the Flatpak bundles it, and the script puts
+# that site-packages directory on sys.path.)
 TOOLS        = find_rpm.py led_test.py led_map.py
 DEVTOOLS     = verify_protocol.py
 
