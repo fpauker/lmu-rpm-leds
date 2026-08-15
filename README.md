@@ -92,6 +92,8 @@ where each threshold sits.
 | `blink_hz` | flashing speed | 8.0 |
 | `rate` | telemetry polls per second | 50.0 |
 | `leds` | LEDs in the rim | 10 |
+| `mode` | `bar` fills left to right, `center` from both ends inward | `bar` |
+| `adaptive` | scale the curve to what each gear actually revs to | true |
 | `legacy` | use the older telemetry command id | false |
 | `enabled` | feed the LEDs at all | true |
 
@@ -105,6 +107,30 @@ revs a long way and the bar clears on its own. In the tall gears on a long
 straight it may only fall from 8250 to 7800 rpm — 94.5 % — so an `end` of 0.93
 leaves the bar stuck at full. The app spells each threshold out in RPM of the
 car you are driving, which makes that easy to see.
+
+### Adapting to the gear
+
+A curve pinned to the rev limiter only works in the gears that reach it.
+Measured on a GT car at Spa, with the limiter at 7800 rpm:
+
+| Gear | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| highest reached | 100 % | 99.5 % | 99 % | 95.7 % | 89.9 % | **78.7 %** |
+
+With the first LED at 88 % of the limiter, the bar therefore stayed dark for
+the whole of top gear — the car is gear-limited up there, not rev-limited, and
+no threshold works for both ends of the gearbox.
+
+With `adaptive` on, each gear gets its own reference: the highest RPM seen in
+that gear this session. Replaying the same lap, the share of time the bar was
+doing anything went from 8.5 % to 56 % in third and from 20 % to 59 % in
+fourth. A gear needs about three seconds of driving before its reference is
+trusted; until then the limiter is used, so the display is never worse than it
+was.
+
+Nothing is remembered between sessions. Changing the gearing in the setup would
+make yesterday's numbers wrong, and one lap of relearning costs less than a
+stale reference.
 
 ## How it works
 
@@ -253,6 +279,7 @@ LANGUAGE=en lmu-rpm-leds
 | `service.py` | systemd over D-Bus, journal view |
 | `ledview.py` | Cairo drawing for the bar and the curve |
 | `i18n.py` | translation setup |
+| `gearscale.py` | learns what each gear revs to |
 | `po/` | translation template and catalogues |
 | `verify_protocol.py` | frame comparison against boxflat |
 | `find_rpm.py` | locates the telemetry in memory (diagnostics) |

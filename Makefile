@@ -17,7 +17,7 @@ LOCALEDIR    = $(DESTDIR)$(PREFIX)/share/locale
 ICONDIR      = $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps
 
 MODULES      = lmu_rpm_leds.py lmu_led_config.py moza.py config.py \
-               service.py ledview.py i18n.py
+               service.py ledview.py i18n.py gearscale.py
 # Shipped for troubleshooting. verify_protocol.py stays out of the package on
 # purpose: it compares against boxflat's own encoder and therefore needs boxflat
 # installed as a Flatpak, which no user should have to do to run the daemon.

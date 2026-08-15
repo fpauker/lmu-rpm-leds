@@ -22,6 +22,7 @@ DEFAULTS = {
     "rate": 50.0,       # telemetry polls per second
     "leds": 10,         # LEDs on the rim
     "mode": "bar",      # "bar" fills left to right, "center" from both ends
+    "adaptive": True,   # scale the curve to what each gear actually revs to
     "legacy": False,    # use the old telemetry command id
     "enabled": True,    # feed the LEDs at all
 }

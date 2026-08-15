@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lmu-rpm-leds 1.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/fpauker/lmu-rpm-leds/issues\n"
-"POT-Creation-Date: 2026-08-16 00:09+0200\n"
+"POT-Creation-Date: 2026-08-16 00:18+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,333 +17,341 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: lmu_rpm_leds.py:241
+#: lmu_rpm_leds.py:242
 #, python-brace-format
 msgid "Wheel connected: {path}"
 msgstr ""
 
-#: lmu_rpm_leds.py:246
+#: lmu_rpm_leds.py:247
 #, python-brace-format
 msgid "Wheel not reachable ({error}) — will keep trying."
 msgstr ""
 
-#: lmu_rpm_leds.py:262
+#: lmu_rpm_leds.py:263
 #, python-brace-format
 msgid "Wheel lost ({error}) — reconnecting."
 msgstr ""
 
-#: lmu_rpm_leds.py:323
+#: lmu_rpm_leds.py:324
 msgid "fraction of maximum RPM where the first LED lights"
 msgstr ""
 
-#: lmu_rpm_leds.py:325
+#: lmu_rpm_leds.py:326
 msgid "fraction where the whole bar is lit"
 msgstr ""
 
-#: lmu_rpm_leds.py:327
+#: lmu_rpm_leds.py:328
 msgid "fraction where the bar starts flashing (shift point)"
 msgstr ""
 
-#: lmu_rpm_leds.py:328
+#: lmu_rpm_leds.py:329
 msgid "updates per second"
 msgstr ""
 
-#: lmu_rpm_leds.py:330
+#: lmu_rpm_leds.py:331
 msgid "use the legacy telemetry command (id 253/222)"
 msgstr ""
 
-#: lmu_rpm_leds.py:362
+#: lmu_rpm_leds.py:365
 msgid "Running. Ctrl+C to stop."
 msgstr ""
 
-#: lmu_rpm_leds.py:363
+#: lmu_rpm_leds.py:366
 #, python-brace-format
 msgid "Configuration: {path}"
 msgstr ""
 
-#: lmu_rpm_leds.py:374
+#: lmu_rpm_leds.py:377
 #, python-brace-format
 msgid ""
 "\n"
 "Curve reloaded: start={start:.2f} end={end:.2f} blink={blink:.2f}"
 msgstr ""
 
-#: lmu_rpm_leds.py:404
+#: lmu_rpm_leds.py:407
 #, python-brace-format
 msgid "Telemetry found: {path} @ {offset}"
 msgstr ""
 
-#: lmu_rpm_leds.py:408
+#: lmu_rpm_leds.py:411
 msgid ""
 "\n"
 "LMU has quit — waiting for the next start."
 msgstr ""
 
-#: lmu_rpm_leds.py:419
+#: lmu_rpm_leds.py:423
 msgid ""
 "\n"
 "Telemetry frozen — searching for the source again."
 msgstr ""
 
-#: lmu_rpm_leds.py:468
+#: lmu_rpm_leds.py:484
 msgid ""
 "\n"
 "Stopping ..."
 msgstr ""
 
-#: lmu_led_config.py:42
+#: lmu_led_config.py:43
 msgid "Late"
 msgstr ""
 
-#: lmu_led_config.py:43
+#: lmu_led_config.py:44
 msgid "Standard"
 msgstr ""
 
-#: lmu_led_config.py:44
+#: lmu_led_config.py:45
 msgid "Early"
 msgstr ""
 
-#: lmu_led_config.py:45
+#: lmu_led_config.py:46
 msgid "Full range"
 msgstr ""
 
-#: lmu_led_config.py:89
+#: lmu_led_config.py:90
 msgid "MOZA RPM LEDs"
 msgstr ""
 
-#: lmu_led_config.py:118 lmu_led_config.py:136 lmu_led_config.py:396
-#: lmu_led_config.py:443
+#: lmu_led_config.py:119 lmu_led_config.py:137 lmu_led_config.py:405
+#: lmu_led_config.py:452
 msgid "Show journal"
 msgstr ""
 
-#: lmu_led_config.py:137
+#: lmu_led_config.py:138
 msgid "Configuration file"
 msgstr ""
 
-#: lmu_led_config.py:157
+#: lmu_led_config.py:158
 msgid "Service"
 msgstr ""
 
-#: lmu_led_config.py:159
+#: lmu_led_config.py:160
 msgid "Status"
 msgstr ""
 
-#: lmu_led_config.py:159
+#: lmu_led_config.py:160
 msgid "checking …"
 msgstr ""
 
-#: lmu_led_config.py:163
+#: lmu_led_config.py:164
 msgid "Restart the service"
 msgstr ""
 
-#: lmu_led_config.py:170
+#: lmu_led_config.py:171
 msgid "Service running"
 msgstr ""
 
-#: lmu_led_config.py:171
+#: lmu_led_config.py:172
 msgid "feeds the LEDs in the background"
 msgstr ""
 
-#: lmu_led_config.py:175
+#: lmu_led_config.py:176
 msgid "Start on login"
 msgstr ""
 
-#: lmu_led_config.py:176
+#: lmu_led_config.py:177
 msgid "enable the systemd user service"
 msgstr ""
 
-#: lmu_led_config.py:188
+#: lmu_led_config.py:189
 msgid "Preview"
 msgstr ""
 
-#: lmu_led_config.py:189
+#: lmu_led_config.py:190
 msgid "Shows live what is lit on the wheel"
 msgstr ""
 
-#: lmu_led_config.py:198
+#: lmu_led_config.py:199
 msgid "no telemetry"
 msgstr ""
 
-#: lmu_led_config.py:209
+#: lmu_led_config.py:210
 msgid "Simulation"
 msgstr ""
 
-#: lmu_led_config.py:210
+#: lmu_led_config.py:211
 msgid "pause the service and drive the LEDs with the slider"
 msgstr ""
 
-#: lmu_led_config.py:233
+#: lmu_led_config.py:234
 msgid "Curve"
 msgstr ""
 
-#: lmu_led_config.py:234
+#: lmu_led_config.py:235
 msgid "Fraction of maximum RPM, in percent"
 msgstr ""
 
-#: lmu_led_config.py:247
+#: lmu_led_config.py:248
 msgid "Fill style"
 msgstr ""
 
-#: lmu_led_config.py:248
+#: lmu_led_config.py:249
 msgid "how the bar grows as the revs rise"
 msgstr ""
 
-#: lmu_led_config.py:249
+#: lmu_led_config.py:250
 msgid "Left to right"
 msgstr ""
 
-#: lmu_led_config.py:249
+#: lmu_led_config.py:250
 msgid "From both ends"
 msgstr ""
 
-#: lmu_led_config.py:253
+#: lmu_led_config.py:255
+msgid "Adapt to gear"
+msgstr ""
+
+#: lmu_led_config.py:256
+msgid "scale to what each gear actually revs to"
+msgstr ""
+
+#: lmu_led_config.py:260
 msgid "First LED"
 msgstr ""
 
-#: lmu_led_config.py:254 lmu_led_config.py:262
+#: lmu_led_config.py:261 lmu_led_config.py:269
 msgid "the first LED lights from here"
 msgstr ""
 
-#: lmu_led_config.py:255
+#: lmu_led_config.py:262
 msgid "All LEDs"
 msgstr ""
 
-#: lmu_led_config.py:256 lmu_led_config.py:263
+#: lmu_led_config.py:263 lmu_led_config.py:270
 msgid "the whole bar is lit from here"
 msgstr ""
 
-#: lmu_led_config.py:257
+#: lmu_led_config.py:264
 msgid "Blink"
 msgstr ""
 
-#: lmu_led_config.py:258 lmu_led_config.py:264
+#: lmu_led_config.py:265 lmu_led_config.py:271
 msgid "shift point, the bar flashes"
 msgstr ""
 
-#: lmu_led_config.py:281
+#: lmu_led_config.py:288
 msgid "More settings"
 msgstr ""
 
-#: lmu_led_config.py:283
+#: lmu_led_config.py:290
 msgid "Blink rate"
 msgstr ""
 
-#: lmu_led_config.py:283
+#: lmu_led_config.py:290
 msgid "flashes per second"
 msgstr ""
 
-#: lmu_led_config.py:287
+#: lmu_led_config.py:294
 msgid "Sample rate"
 msgstr ""
 
-#: lmu_led_config.py:287
+#: lmu_led_config.py:294
 msgid "telemetry polls per second"
 msgstr ""
 
-#: lmu_led_config.py:291
+#: lmu_led_config.py:298
 msgid "LEDs in the rim"
 msgstr ""
 
-#: lmu_led_config.py:291
+#: lmu_led_config.py:298
 msgid "number of segments"
 msgstr ""
 
-#: lmu_led_config.py:295
+#: lmu_led_config.py:302
 msgid "Legacy telemetry command"
 msgstr ""
 
-#: lmu_led_config.py:296
+#: lmu_led_config.py:303
 msgid "only needed if the bar stays dark"
 msgstr ""
 
-#: lmu_led_config.py:300
+#: lmu_led_config.py:307
 msgid "LED test"
 msgstr ""
 
-#: lmu_led_config.py:301
+#: lmu_led_config.py:308
 msgid "play a sweep on the wheel"
 msgstr ""
 
-#: lmu_led_config.py:302
+#: lmu_led_config.py:309
 msgid "Start"
 msgstr ""
 
-#: lmu_led_config.py:352
+#: lmu_led_config.py:361
 #, python-brace-format
 msgid "Curve “{name}” applied"
 msgstr ""
 
-#: lmu_led_config.py:363
+#: lmu_led_config.py:372
 msgid "Wait for the LED test to finish"
 msgstr ""
 
-#: lmu_led_config.py:375
+#: lmu_led_config.py:384
 #, python-brace-format
 msgid "Wheel not reachable: {error}"
 msgstr ""
 
-#: lmu_led_config.py:382
+#: lmu_led_config.py:391
 msgid "Service paused — the slider drives the LEDs"
 msgstr ""
 
-#: lmu_led_config.py:391
+#: lmu_led_config.py:400
 msgid "Simulation active — the LEDs follow the slider, not the game"
 msgstr ""
 
-#: lmu_led_config.py:393
+#: lmu_led_config.py:402
 msgid "Stop"
 msgstr ""
 
-#: lmu_led_config.py:441
+#: lmu_led_config.py:450
 msgid "The service has failed"
 msgstr ""
 
-#: lmu_led_config.py:474
+#: lmu_led_config.py:483
 #, python-brace-format
 msgid "Simulation — {percent:.0f} % of maximum RPM"
 msgstr ""
 
-#: lmu_led_config.py:484
+#: lmu_led_config.py:503
 #, python-brace-format
 msgid ""
 "{rpm} of {max} rpm  ·  {percent:.0f} %  ·  gear {gear}  ·  throttle "
 "{throttle:.0f} %"
 msgstr ""
 
-#: lmu_led_config.py:490
+#: lmu_led_config.py:509
 msgid "no telemetry — are you in the car?"
 msgstr ""
 
-#: lmu_led_config.py:495
+#: lmu_led_config.py:514
 msgid "receiving telemetry"
 msgstr ""
 
-#: lmu_led_config.py:501
+#: lmu_led_config.py:520
 msgid "running, but no car on track"
 msgstr ""
 
-#: lmu_led_config.py:504
+#: lmu_led_config.py:523
 msgid "not started"
 msgstr ""
 
-#: lmu_led_config.py:550
+#: lmu_led_config.py:569
 #, python-brace-format
 msgid "{base} — {rpm} rpm"
 msgstr ""
 
-#: lmu_led_config.py:645
+#: lmu_led_config.py:664
 msgid "LED test running …"
 msgstr ""
 
-#: lmu_led_config.py:649
+#: lmu_led_config.py:668
 msgid "Journal"
 msgstr ""
 
-#: lmu_led_config.py:650
+#: lmu_led_config.py:669
 msgid "Service messages, live"
 msgstr ""
 
-#: lmu_led_config.py:658
+#: lmu_led_config.py:677
 msgid "Close"
 msgstr ""
 

@@ -38,6 +38,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config
+import gearscale
 import moza
 from i18n import _
 
@@ -358,6 +359,8 @@ def main():
     blink_phase = False
     blinking = False
     blink_at = 0.0
+    scale = gearscale.GearScale()
+    last_publish = 0.0
     last_cfg_poll = 0.0
     print(_("Running. Ctrl+C to stop."))
     print(_("Configuration: {path}").format(path=config.config_path()))
@@ -408,6 +411,7 @@ def main():
                 print(_("\nLMU has quit — waiting for the next start."))
                 tele.close()
                 tele = None
+                scale.reset()
                 last_mask = send(0)
                 continue
 
@@ -437,7 +441,18 @@ def main():
                     last_elapsed = tele.elapsed
                     last_good = now
                 leds = cfg["leds"]
-                frac = rpm / mx
+                # In the tall gears the car never reaches the limiter, so the
+                # curve is scaled to what this gear actually revs to. Until a
+                # gear has shown its range the limiter is used, which is the
+                # unadapted behaviour.
+                if cfg["adaptive"]:
+                    reference = scale.observe(rpm, mx, gear, now)
+                    if now - last_publish > 2.0:
+                        last_publish = now
+                        gearscale.publish(scale.table(mx), mx)
+                else:
+                    reference = mx
+                frac = rpm / reference if reference else 0.0
                 mask = mask_for(leds_lit(frac, cfg["start"], cfg["end"], leds),
                                 leds, cfg["mode"])
 
@@ -458,8 +473,9 @@ def main():
                         blink_at = now
                     mask = (1 << leds) - 1 if blink_phase else 0
                 if args.verbose:
-                    print(f"\rrpm={rpm:6.0f}/{mx:6.0f} gang={gear:2} "
-                          f"gas={throttle:4.2f} leds={mask:010b}", end="", flush=True)
+                    print(f"\rrpm={rpm:6.0f}/{mx:6.0f} ref={reference:6.0f} "
+                          f"gang={gear:2} gas={throttle:4.2f} "
+                          f"leds={mask:010b}", end="", flush=True)
 
             if mask != last_mask:
                 last_mask = send(mask)

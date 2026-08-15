@@ -22,6 +22,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config  # noqa: E402
+import gearscale  # noqa: E402
 from i18n import _  # noqa: E402
 import ledview  # noqa: E402
 import lmu_rpm_leds as daemon  # noqa: E402
@@ -250,6 +251,12 @@ class Window(Adw.ApplicationWindow):
         self.row_mode.connect("notify::selected", self._on_widget_changed)
         group.add(self.row_mode)
 
+        self.row_adaptive = Adw.SwitchRow(
+            title=_("Adapt to gear"),
+            subtitle=_("scale to what each gear actually revs to"))
+        self.row_adaptive.connect("notify::active", self._on_widget_changed)
+        group.add(self.row_adaptive)
+
         self.row_start = self._spin(_("First LED"),
                                     _("the first LED lights from here"), 30, 100, 1)
         self.row_end = self._spin(_("All LEDs"),
@@ -326,6 +333,7 @@ class Window(Adw.ApplicationWindow):
         self.row_leds.set_value(self.cfg["leds"])
         self.row_legacy.set_active(self.cfg["legacy"])
         self.row_mode.set_selected(config.MODES.index(self.cfg["mode"]))
+        self.row_adaptive.set_active(self.cfg["adaptive"])
         self._loading = False
         self._redraw()
 
@@ -341,6 +349,7 @@ class Window(Adw.ApplicationWindow):
             "leds": int(self.row_leds.get_value()),
             "legacy": self.row_legacy.get_active(),
             "mode": config.MODES[self.row_mode.get_selected()],
+            "adaptive": self.row_adaptive.get_active(),
         })
         self.cfg = config.save(self.cfg)
         self._redraw()
@@ -475,9 +484,19 @@ class Window(Adw.ApplicationWindow):
                     percent=frac * 100))
         elif sample:
             rpm, mx, gear, throttle = sample
-            frac = rpm / mx if mx else 0.0
-            if mx and mx != self._last_maxrpm:
-                self._last_maxrpm = mx
+            # Use the reference the daemon has learned, so the preview and the
+            # wheel never disagree. Falls back to the limiter when the daemon
+            # is not running or has not learned this gear yet.
+            reference = mx
+            if cfg["adaptive"]:
+                published = gearscale.read()
+                if published and published.get("maxrpm") == mx:
+                    entry = published.get("gears", {}).get(str(gear))
+                    if entry and entry.get("learned"):
+                        reference = entry["reference"] or mx
+            frac = rpm / reference if reference else 0.0
+            if reference != self._last_maxrpm:
+                self._last_maxrpm = reference
                 self._update_threshold_texts()
             gear_text = "N" if gear == 0 else ("R" if gear < 0 else str(gear))
             self.lbl_rpm.set_label(
@@ -548,7 +567,7 @@ class Window(Adw.ApplicationWindow):
             base = self._spin_texts[row]
             if mx:
                 row.set_subtitle(_("{base} — {rpm} rpm").format(
-                    base=base, rpm=f"{self.cfg[key] * mx:,.0f}"))
+                    base=base, rpm=f"{self.cfg[key] * mx:,.0f}".replace(",", ".")))
             else:
                 row.set_subtitle(base)
 
