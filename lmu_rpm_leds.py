@@ -42,6 +42,7 @@ import moza
 from i18n import _
 
 STRIDE = 1888  # sizeof(TelemInfoV01), pack(4)
+OFF_ELAPSED = 12   # mElapsedTime, the session clock
 OFF_GEAR = 352
 OFF_RPM = 356
 OFF_MAXRPM = 532
@@ -170,6 +171,9 @@ class Telemetry:
         self.hdr = hdr
         self.pid = path.split("/")[2]
         self.fd = os.open(path, os.O_RDONLY)
+        # Session clock of the last sample, used to tell a frozen buffer from a
+        # car that is simply standing still.
+        self.elapsed = None
 
     def alive(self):
         """Our fd keeps the memfd alive after the game exits, so reads would
@@ -188,6 +192,7 @@ class Telemetry:
         buf = os.pread(self.fd, STRIDE, entry)
         if len(buf) < OFF_MAXRPM + 8:
             return None
+        self.elapsed = struct.unpack_from("<d", buf, OFF_ELAPSED)[0]
         gear = struct.unpack_from("<i", buf, OFF_GEAR)[0]
         rpm = struct.unpack_from("<d", buf, OFF_RPM)[0]
         mx = struct.unpack_from("<d", buf, OFF_MAXRPM)[0]
@@ -319,8 +324,8 @@ def main():
 
     tele = None
     last_mask = None
-    last_good = 0.0        # when telemetry last actually moved
-    last_rpm = None
+    last_good = 0.0        # when the session clock last advanced
+    last_elapsed = None
     blink_phase = False
     blink_at = 0.0
     last_cfg_poll = 0.0
@@ -365,7 +370,7 @@ def main():
                     continue
                 tele = Telemetry(*found)
                 last_good = now
-                last_rpm = None
+                last_elapsed = None
                 print(_("Telemetry found: {path} @ {offset}")
                       .format(path=tele.path, offset=tele.hdr))
 
@@ -377,7 +382,9 @@ def main():
                 continue
 
             # The game can swap its mapping on a session change, leaving us
-            # reading a block that is still valid but no longer fed.
+            # reading a block that is still valid but no longer fed. The test
+            # is the session clock, not the revs: a car parked in the pits
+            # legitimately holds the same RPM for minutes on end.
             if last_good and now - last_good > 20.0:
                 print(_("\nTelemetry frozen — searching for the source again."))
                 tele.close()
@@ -396,8 +403,8 @@ def main():
                 mask = 0
             else:
                 rpm, mx, gear, throttle = sample
-                if rpm != last_rpm:
-                    last_rpm = rpm
+                if tele.elapsed != last_elapsed:
+                    last_elapsed = tele.elapsed
                     last_good = now
                 leds = cfg["leds"]
                 mask = leds_for(rpm, mx, cfg["start"], cfg["end"], leds)
