@@ -17,24 +17,25 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import moza
+from i18n import _
 
 
 def sweep(send, label):
     print(f"\n>>> {label}")
-    print("    Aufbauen 1->10 ...")
+    print(_("    Filling 1->10 ..."))
     for i in range(moza.RPM_LEDS + 1):
         send((1 << i) - 1)
         time.sleep(0.12)
-    print("    Abbauen 10->0 ...")
+    print(_("    Emptying 10->0 ..."))
     for i in reversed(range(moza.RPM_LEDS + 1)):
         send((1 << i) - 1)
         time.sleep(0.12)
-    print("    Lauflicht ...")
+    print(_("    Chase ..."))
     for _ in range(2):
         for i in range(moza.RPM_LEDS):
             send(1 << i)
             time.sleep(0.06)
-    print("    Blinken (alle) ...")
+    print(_("    Flashing (all) ..."))
     for _ in range(3):
         send((1 << moza.RPM_LEDS) - 1)
         time.sleep(0.2)
@@ -45,19 +46,19 @@ def sweep(send, label):
 
 def main():
     with moza.MozaSerial() as m:
-        print(f"Port offen: {m.path}")
-        print("Setze rpm-indicator-mode = 1 (externe Telemetrie)")
+        print(_("Port open: {path}").format(path=m.path))
+        print(_("Setting rpm-indicator-mode = 1 (external telemetry)"))
         m.set_indicator_mode(1)
         time.sleep(0.3)
 
-        sweep(m.set_leds, "PHASE 1 — neues Kommando (send-rpm-telemetry, id 26/0)")
+        sweep(m.set_leds, _("PHASE 1 — new command (send-rpm-telemetry, id 26/0)"))
         time.sleep(1.0)
-        sweep(m.set_leds_legacy, "PHASE 2 — altes Kommando (old-send-telemetry, id 253/222)")
+        sweep(m.set_leds_legacy, _("PHASE 2 — legacy command (old-send-telemetry, id 253/222)"))
 
-        print("\nSetze rpm-indicator-mode zurueck auf 0")
+        print(_("\nResetting rpm-indicator-mode to 0"))
         m.set_indicator_mode(0)
         m.set_leds(0)
-    print("Fertig.")
+    print(_("Done."))
 
 
 if __name__ == "__main__":

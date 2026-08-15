@@ -19,6 +19,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from i18n import _
+
 RPM_TO_MAX = 176  # byte distance between mEngineRPM and mEngineMaxRPM
 
 
@@ -103,32 +106,32 @@ def main():
     files = all_shm_files() if everywhere else lmu_shm_files()
     files += wine_mapping_fds()
     if not files:
-        print("LMU laeuft nicht (oder mappt nichts in /dev/shm).")
+        print(_("LMU is not running (or maps nothing in /dev/shm)."))
         return 1
 
-    print(f"{len(files)} Shared-Memory-Objekte von LMU:")
+    print(_("{count} shared memory objects from LMU:").format(count=len(files)))
     for f in files:
         try:
             print(f"   {f}  {os.path.getsize(f)} bytes")
         except OSError:
             pass
 
-    print("\nSuche nach dem RPM/MaxRPM-Paar ...")
+    print(_("\nSearching for the RPM/MaxRPM pair ..."))
     found = {}
     for path in files:
         hits = scan(path)
         if hits:
             found[path] = hits
-            print(f"\n  {path}: {len(hits)} Kandidat(en)")
+            print(_("\n  {path}: {count} candidate(s)").format(path=path, count=len(hits)))
             for off, rpm, mx in hits[:12]:
                 print(f"     offset {off:>9}  rpm={rpm:9.1f}  max={mx:9.1f}")
 
     if not found:
-        print("\n  Nichts gefunden. Sitzt du im Auto auf der Strecke?")
+        print(_("\n  Nothing found. Are you in the car, on track?"))
         return 1
 
     # Watch the candidates: real RPM moves, stale copies do not.
-    print("\nBeobachte 3 Sekunden — welcher Wert bewegt sich?")
+    print(_("\nWatching for 3 seconds — which value moves?"))
     for path, hits in found.items():
         offs = [h[0] for h in hits[:12]]
         series = {o: [] for o in offs}
@@ -140,7 +143,7 @@ def main():
         for o in offs:
             vals = series[o]
             spread = max(vals) - min(vals)
-            tag = "  <== BEWEGT SICH" if spread > 5 else ""
+            tag = _("  <== MOVING") if spread > 5 else ""
             print(f"   {path} +{o}: {' '.join(f'{v:7.0f}' for v in vals)}{tag}")
     return 0
 

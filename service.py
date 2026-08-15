@@ -8,6 +8,8 @@ polled. Only Gio/GLib from python3-gobject — no extra dependencies.
 
 from gi.repository import Gio, GLib, GObject
 
+from i18n import _
+
 UNIT = "lmu-rpm-leds.service"
 
 BUS_NAME = "org.freedesktop.systemd1"
@@ -63,7 +65,7 @@ class ServiceController(GObject.Object):
                 "LoadUnit", GLib.Variant("(s)", (self.unit_name,)),
                 Gio.DBusCallFlags.NONE, -1, None).unpack()[0]
         except GLib.Error as e:
-            self.emit("error", f"Unit could not be loaded: {e.message}")
+            self.emit("error", _("Unit could not be loaded: {error}").format(error=e.message))
             return
         self._unit = Gio.DBusProxy.new_sync(
             self._bus, Gio.DBusProxyFlags.DO_NOT_AUTO_START, None,
@@ -215,14 +217,14 @@ class JournalTail(GObject.Object):
 
 
 def describe(active_state, sub_state=""):
-    """German wording for the status line (the UI is German)."""
+    """Wording for the status line."""
     words = {
-        "active": "läuft",
-        "inactive": "gestoppt",
-        "failed": "fehlgeschlagen",
-        "activating": "startet …",
-        "deactivating": "stoppt …",
-        "unknown": "unbekannt",
+        "active": _("running"),
+        "inactive": _("stopped"),
+        "failed": _("failed"),
+        "activating": _("starting …"),
+        "deactivating": _("stopping …"),
+        "unknown": _("unknown"),
     }
     text = words.get(active_state, active_state)
     if active_state == "failed" and sub_state:
@@ -240,4 +242,4 @@ def read_journal(unit_name, lines=100):
         ).communicate_utf8(None, None)
         return out or ""
     except GLib.Error as e:
-        return f"Journal could not be read: {e.message}"
+        return _("Journal could not be read: {error}").format(error=e.message)

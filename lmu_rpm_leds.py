@@ -39,6 +39,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config
 import moza
+from i18n import _
 
 STRIDE = 1888  # sizeof(TelemInfoV01), pack(4)
 OFF_GEAR = 352
@@ -228,13 +229,13 @@ class Wheel:
         try:
             self._port = moza.MozaSerial()
             self._port.set_indicator_mode(1)
-            print("Lenkrad verbunden." if self._complained else
-                  f"Lenkrad verbunden: {self._port.path}")
+            print(_("Wheel connected: {path}").format(path=self._port.path))
             self._complained = False
             return True
         except OSError as exc:
             if not self._complained:
-                print(f"Lenkrad nicht erreichbar ({exc}) — versuche es weiter.")
+                print(_("Wheel not reachable ({error}) — will keep trying.")
+                      .format(error=exc))
                 self._complained = True
             return False
 
@@ -249,7 +250,7 @@ class Wheel:
                 self._port.set_leds(mask)
             return True
         except OSError as exc:
-            print(f"Lenkrad verloren ({exc}) — verbinde neu.")
+            print(_("Wheel lost ({error}) — reconnecting.").format(error=exc))
             self.close(restore=False)
             self._complained = True
             return False
@@ -285,13 +286,14 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--start", type=float,
-                    help="Anteil der Maximaldrehzahl, ab dem die erste LED leuchtet")
-    ap.add_argument("--end", type=float, help="Anteil, ab dem alle LEDs leuchten")
+                    help=_("fraction of maximum RPM where the first LED lights"))
+    ap.add_argument("--end", type=float,
+                    help=_("fraction where the whole bar is lit"))
     ap.add_argument("--blink", type=float,
-                    help="Anteil, ab dem der Balken blinkt (Schaltpunkt)")
-    ap.add_argument("--rate", type=float, help="Updates pro Sekunde")
+                    help=_("fraction where the bar starts flashing (shift point)"))
+    ap.add_argument("--rate", type=float, help=_("updates per second"))
     ap.add_argument("--legacy", action="store_true", default=None,
-                    help="altes Telemetriekommando verwenden (id 253/222)")
+                    help=_("use the legacy telemetry command (id 253/222)"))
     ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -322,8 +324,8 @@ def main():
     blink_phase = False
     blink_at = 0.0
     last_cfg_poll = 0.0
-    print("Laeuft. Strg+C zum Beenden.")
-    print(f"Konfiguration: {config.config_path()}")
+    print(_("Running. Ctrl+C to stop."))
+    print(_("Configuration: {path}").format(path=config.config_path()))
     try:
         while True:
             # Pick up GUI edits without a restart, but do not stat the file at
@@ -334,8 +336,10 @@ def main():
                 if watcher.poll():
                     cfg = dict(watcher.config, **overrides)
                     last_mask = None  # force a resend under the new curve
-                    print(f"\nKennlinie neu geladen: start={cfg['start']:.2f} "
-                          f"end={cfg['end']:.2f} blink={cfg['blink']:.2f}")
+                    print(_("\nCurve reloaded: start={start:.2f} end={end:.2f} "
+                            "blink={blink:.2f}").format(
+                                start=cfg["start"], end=cfg["end"],
+                                blink=cfg["blink"]))
 
             interval = 1.0 / cfg["rate"]
 
@@ -362,10 +366,11 @@ def main():
                 tele = Telemetry(*found)
                 last_good = now
                 last_rpm = None
-                print(f"Telemetrie gefunden: {tele.path} @ {tele.hdr}")
+                print(_("Telemetry found: {path} @ {offset}")
+                      .format(path=tele.path, offset=tele.hdr))
 
             if not tele.alive():
-                print(f"\nLMU beendet — warte auf naechsten Start.")
+                print(_("\nLMU has quit — waiting for the next start."))
                 tele.close()
                 tele = None
                 last_mask = send(0)
@@ -374,7 +379,7 @@ def main():
             # The game can swap its mapping on a session change, leaving us
             # reading a block that is still valid but no longer fed.
             if last_good and now - last_good > 20.0:
-                print("\nTelemetrie eingefroren — suche die Quelle neu.")
+                print(_("\nTelemetry frozen — searching for the source again."))
                 tele.close()
                 tele = None
                 last_good = 0.0
@@ -409,7 +414,7 @@ def main():
                 last_mask = send(mask)
             time.sleep(interval)
     except (KeyboardInterrupt, SystemExit):
-        print("\nBeende ...")
+        print(_("\nStopping ..."))
     finally:
         wheel.close()
         if tele:

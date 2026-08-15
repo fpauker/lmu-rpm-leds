@@ -9,3 +9,6 @@ __pycache__/
 *.rpm
 *.tar.gz
 *.src.rpm
+
+# Compiled catalogues — built by `make locale`
+/locale/

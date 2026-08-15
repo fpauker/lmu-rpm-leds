@@ -13,6 +13,7 @@ BuildRequires:  make
 BuildRequires:  desktop-file-utils
 BuildRequires:  appstream
 BuildRequires:  systemd-rpm-macros
+BuildRequires:  gettext
 
 Requires:       python3
 Requires:       python3-gobject
@@ -35,11 +36,21 @@ application to shape the curve and manage the service.
 %prep
 %autosetup
 
+# The modules under %%{_datadir} are imported or started through a launcher in
+# %%{_bindir}; none of them is executed directly. Drop the shebang rather than
+# let brp-mangle-shebangs rewrite it into a non-executable file that still
+# carries one.
+sed -i '1{/^#!/d}' lmu_rpm_leds.py lmu_led_config.py
+
 %build
 %make_build
 
 %install
 %make_install PREFIX=%{_prefix}
+
+# Hands the translation catalogues to %%files, so a new language needs no
+# change here beyond its po file.
+%find_lang %{name}
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/io.github.fpauker.LmuRpmLeds.desktop
@@ -58,7 +69,7 @@ appstreamcli validate --no-net --explain \
 %postun
 %systemd_user_postun_with_restart %{name}.service
 
-%files
+%files -f %{name}.lang
 %license LICENSE
 %doc README.md
 %{_bindir}/lmu-rpm-leds

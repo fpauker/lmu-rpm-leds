@@ -20,6 +20,8 @@ import glob
 import os
 import termios
 
+from i18n import _
+
 MSG_START = 0x7E
 MAGIC = 13
 
@@ -68,9 +70,9 @@ def find_base(pattern: str = None) -> str:
         if matches:
             return matches[0]
 
-    raise FileNotFoundError(
-        "Keine Moza-Wheelbase gefunden. Ist sie eingeschaltet und verbunden? "
-        "Notfalls den Port per MOZA_SERIAL_PORT vorgeben.")
+    raise FileNotFoundError(_(
+        "No Moza wheelbase found. Is it switched on and connected? "
+        "As a last resort, name the port in MOZA_SERIAL_PORT."))
 
 
 class MozaSerial:

@@ -17,6 +17,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import moza
+from i18n import _
 
 HOLD = 1.2
 
@@ -28,16 +29,16 @@ def main():
         send = m.set_leds_legacy if legacy else m.set_leds
         time.sleep(0.3)
 
-        print("PHASE 1: alles AUS — 6 Sekunden.")
-        print("         Merk dir, welche LEDs TROTZDEM leuchten.")
+        print(_("PHASE 1: everything OFF — 6 seconds."))
+        print(_("         Note which LEDs stay lit anyway."))
         for i in range(6, 0, -1):
             send(0)
             print(f"   {i} ...", flush=True)
             time.sleep(1.0)
 
-        print("\nPHASE 2: eine LED nach der anderen, Bit 0 bis 15.")
-        print("         Zaehl mit, wie viele verschiedene LEDs angehen")
-        print("         und ob der Lauf links oder rechts beginnt.\n")
+        print(_("\nPHASE 2: one LED after another, bit 0 to 15."))
+        print(_("         Count how many distinct LEDs light up"))
+        print(_("         and whether the run starts left or right.\n"))
         for bit in range(16):
             send(1 << bit)
             print(f"   Bit {bit:2}", flush=True)
@@ -45,7 +46,7 @@ def main():
 
         send(0)
         m.set_indicator_mode(0)
-    print("\nFertig — alles aus, Modus zurueckgesetzt.")
+    print(_("\nDone — all off, mode reset."))
 
 
 if __name__ == "__main__":

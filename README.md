@@ -11,9 +11,8 @@ app to shape the curve and manage the service.
 
 No third-party game plugin, no SimHub, no Wine shared-memory bridge.
 
-> Source code and comments are English. Text aimed at the user — the app, the
-> daemon's journal messages and the `--help` output — is currently German only.
-> Translations welcome.
+> Available in English and German; it follows your desktop language. More
+> translations are welcome — see [Translating](#translating).
 
 ## Requirements
 
@@ -221,6 +220,28 @@ always gets its own PID namespace, and Flatpak can only share `network` and
 exist, so the daemon cannot work there at all. This is a hard boundary, not a
 permissions issue.
 
+## Translating
+
+Strings are handled with gettext. English is the source language; `po/de.po`
+holds the German translation. To add one:
+
+```bash
+msginit --locale=fr --input=po/lmu-rpm-leds.pot --output=po/fr.po
+# translate po/fr.po, then add fr to LINGUAS in the Makefile
+make locale
+```
+
+A source checkout picks up `./locale` automatically, so `make locale` is enough
+to see your work without installing anything. After changing any user-visible
+string in the code, run `make update-po` to refresh the template and merge the
+new strings into the existing catalogues.
+
+To check the other language without changing your desktop settings:
+
+```bash
+LANGUAGE=en lmu-rpm-leds
+```
+
 ## Files
 
 | File | Purpose |
@@ -231,6 +252,8 @@ permissions issue.
 | `config.py` | settings, atomic writes, the pause lease |
 | `service.py` | systemd over D-Bus, journal view |
 | `ledview.py` | Cairo drawing for the bar and the curve |
+| `i18n.py` | translation setup |
+| `po/` | translation template and catalogues |
 | `verify_protocol.py` | frame comparison against boxflat |
 | `find_rpm.py` | locates the telemetry in memory (diagnostics) |
 | `led_test.py`, `led_map.py` | LED tests without the game |

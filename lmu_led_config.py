@@ -22,6 +22,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config  # noqa: E402
+from i18n import _  # noqa: E402
 import ledview  # noqa: E402
 import lmu_rpm_leds as daemon  # noqa: E402
 import moza  # noqa: E402
@@ -29,11 +30,19 @@ import service  # noqa: E402
 
 APP_ID = "io.github.fpauker.LmuRpmLeds"
 
+# Keys double as button labels, so they are translated at use time.
 PRESETS = {
-    "Spät": {"start": 0.90, "end": 0.99, "blink": 0.995},
-    "Standard": {"start": 0.85, "end": 0.98, "blink": 0.99},
-    "Früh": {"start": 0.75, "end": 0.96, "blink": 0.985},
-    "Ganzer Bereich": {"start": 0.40, "end": 0.97, "blink": 0.99},
+    "late": {"start": 0.90, "end": 0.99, "blink": 0.995},
+    "standard": {"start": 0.85, "end": 0.98, "blink": 0.99},
+    "early": {"start": 0.75, "end": 0.96, "blink": 0.985},
+    "full range": {"start": 0.40, "end": 0.97, "blink": 0.99},
+}
+
+PRESET_LABELS = {
+    "late": _("Late"),
+    "standard": _("Standard"),
+    "early": _("Early"),
+    "full range": _("Full range"),
 }
 
 
@@ -77,7 +86,7 @@ class TelemetrySource:
 class Window(Adw.ApplicationWindow):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.set_title("Moza RPM-LEDs")
+        self.set_title(_("MOZA RPM LEDs"))
         self.set_default_size(680, 900)
 
         self.cfg = config.load()
@@ -106,7 +115,7 @@ class Window(Adw.ApplicationWindow):
         view.add_top_bar(header)
 
         self.banner = Adw.Banner(revealed=False)
-        self.banner.set_button_label("Journal zeigen")
+        self.banner.set_button_label(_("Show journal"))
         self.banner.connect("button-clicked", self._on_banner_clicked)
 
         page = Adw.PreferencesPage()
@@ -124,8 +133,8 @@ class Window(Adw.ApplicationWindow):
         self.set_content(self.toasts)
 
         menu = Gio.Menu()
-        menu.append("Journal anzeigen", "win.journal")
-        menu.append("Konfigurationsdatei", "win.reveal")
+        menu.append(_("Show journal"), "win.journal")
+        menu.append(_("Configuration file"), "win.reveal")
         button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
         header.pack_end(button)
         self._add_action("journal", lambda *_: self._show_journal())
@@ -145,26 +154,26 @@ class Window(Adw.ApplicationWindow):
         self.add_action(act)
 
     def _group_status(self):
-        group = Adw.PreferencesGroup(title="Dienst")
+        group = Adw.PreferencesGroup(title=_("Service"))
 
-        self.row_state = Adw.ActionRow(title="Status", subtitle="wird geprüft …")
+        self.row_state = Adw.ActionRow(title=_("Status"), subtitle=_("checking …"))
         self.state_icon = Gtk.Image(icon_name="content-loading-symbolic")
         self.row_state.add_prefix(self.state_icon)
         restart = Gtk.Button(icon_name="view-refresh-symbolic",
-                             tooltip_text="Dienst neu starten",
+                             tooltip_text=_("Restart the service"),
                              valign=Gtk.Align.CENTER)
         restart.add_css_class("flat")
         restart.connect("clicked", lambda *_: self.svc.restart())
         self.row_state.add_suffix(restart)
         group.add(self.row_state)
 
-        self.row_running = Adw.SwitchRow(title="Dienst läuft",
-                                         subtitle="speist die LEDs im Hintergrund")
+        self.row_running = Adw.SwitchRow(title=_("Service running"),
+                                         subtitle=_("feeds the LEDs in the background"))
         self.row_running.connect("notify::active", self._on_running_toggled)
         group.add(self.row_running)
 
-        self.row_autostart = Adw.SwitchRow(title="Beim Anmelden starten",
-                                           subtitle="systemd-User-Service aktivieren")
+        self.row_autostart = Adw.SwitchRow(title=_("Start on login"),
+                                           subtitle=_("enable the systemd user service"))
         self.row_autostart.connect("notify::active", self._on_autostart_toggled)
         group.add(self.row_autostart)
 
@@ -176,8 +185,8 @@ class Window(Adw.ApplicationWindow):
 
     def _group_preview(self):
         group = Adw.PreferencesGroup(
-            title="Vorschau",
-            description="Zeigt live, was auf dem Lenkrad leuchtet")
+            title=_("Preview"),
+            description=_("Shows live what is lit on the wheel"))
 
         self.bar = Gtk.DrawingArea(content_height=46)
         self.bar.set_draw_func(self._draw_bar)
@@ -186,7 +195,7 @@ class Window(Adw.ApplicationWindow):
         self.bar.set_margin_start(6)
         self.bar.set_margin_end(6)
 
-        self.lbl_rpm = Gtk.Label(label="keine Telemetrie", xalign=0.5)
+        self.lbl_rpm = Gtk.Label(label=_("no telemetry"), xalign=0.5)
         self.lbl_rpm.add_css_class("dim-label")
 
         wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -197,8 +206,8 @@ class Window(Adw.ApplicationWindow):
         group.add(row)
 
         self.row_sim = Adw.SwitchRow(
-            title="Simulation",
-            subtitle="Dienst pausieren und die LEDs mit dem Regler steuern")
+            title=_("Simulation"),
+            subtitle=_("pause the service and drive the LEDs with the slider"))
         self.row_sim.connect("notify::active", self._on_sim_toggled)
         group.add(self.row_sim)
 
@@ -221,8 +230,8 @@ class Window(Adw.ApplicationWindow):
 
     def _group_curve(self):
         group = Adw.PreferencesGroup(
-            title="Kennlinie",
-            description="Anteil der Maximaldrehzahl, in Prozent")
+            title=_("Curve"),
+            description=_("Fraction of maximum RPM, in percent"))
 
         self.chart = Gtk.DrawingArea(content_height=170)
         self.chart.set_draw_func(self._draw_chart)
@@ -234,18 +243,18 @@ class Window(Adw.ApplicationWindow):
         self.chart.set_margin_end(8)
         group.add(chart_row)
 
-        self.row_start = self._spin("Erste LED", "ab hier leuchtet die erste LED",
-                                    30, 100, 1)
-        self.row_end = self._spin("Alle LEDs", "ab hier leuchtet der ganze Balken",
-                                  35, 105, 1)
-        self.row_blink = self._spin("Blinken", "Schaltpunkt, der Balken blinkt",
-                                    40, 110, 1)
+        self.row_start = self._spin(_("First LED"),
+                                    _("the first LED lights from here"), 30, 100, 1)
+        self.row_end = self._spin(_("All LEDs"),
+                                  _("the whole bar is lit from here"), 35, 105, 1)
+        self.row_blink = self._spin(_("Blink"),
+                                    _("shift point, the bar flashes"), 40, 110, 1)
         # Percentages alone give no feel for where a threshold actually sits, so
         # the live limiter is folded into the subtitles as absolute revs.
         self._spin_texts = {
-            self.row_start: "ab hier leuchtet die erste LED",
-            self.row_end: "ab hier leuchtet der ganze Balken",
-            self.row_blink: "Schaltpunkt, der Balken blinkt",
+            self.row_start: _("the first LED lights from here"),
+            self.row_end: _("the whole bar is lit from here"),
+            self.row_blink: _("shift point, the bar flashes"),
         }
         for row in (self.row_start, self.row_end, self.row_blink):
             group.add(row)
@@ -253,7 +262,7 @@ class Window(Adw.ApplicationWindow):
         presets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6,
                           halign=Gtk.Align.CENTER, margin_top=6, margin_bottom=6)
         for name in PRESETS:
-            btn = Gtk.Button(label=name)
+            btn = Gtk.Button(label=PRESET_LABELS[name])
             btn.connect("clicked", self._on_preset, name)
             presets.append(btn)
         preset_row = Adw.PreferencesRow(activatable=False)
@@ -262,28 +271,28 @@ class Window(Adw.ApplicationWindow):
         return group
 
     def _group_advanced(self):
-        group = Adw.PreferencesGroup(title="Weitere Einstellungen")
+        group = Adw.PreferencesGroup(title=_("More settings"))
 
-        self.row_blink_hz = self._spin("Blinkfrequenz", "Blinkvorgänge pro Sekunde",
+        self.row_blink_hz = self._spin(_("Blink rate"), _("flashes per second"),
                                        1, 30, 1, suffix=" Hz")
         group.add(self.row_blink_hz)
 
-        self.row_rate = self._spin("Abtastrate", "Telemetrieabfragen pro Sekunde",
+        self.row_rate = self._spin(_("Sample rate"), _("telemetry polls per second"),
                                    5, 200, 5, suffix=" Hz")
         group.add(self.row_rate)
 
-        self.row_leds = self._spin("LEDs im Kranz", "Anzahl der Segmente", 1, 16, 1)
+        self.row_leds = self._spin(_("LEDs in the rim"), _("number of segments"), 1, 16, 1)
         group.add(self.row_leds)
 
         self.row_legacy = Adw.SwitchRow(
-            title="Altes Telemetriekommando",
-            subtitle="nur nötig, wenn der Balken dunkel bleibt")
+            title=_("Legacy telemetry command"),
+            subtitle=_("only needed if the bar stays dark"))
         self.row_legacy.connect("notify::active", self._on_widget_changed)
         group.add(self.row_legacy)
 
-        test = Adw.ActionRow(title="LED-Test",
-                             subtitle="Lauflicht auf dem Lenkrad abspielen")
-        btn = Gtk.Button(label="Starten", valign=Gtk.Align.CENTER)
+        test = Adw.ActionRow(title=_("LED test"),
+                             subtitle=_("play a sweep on the wheel"))
+        btn = Gtk.Button(label=_("Start"), valign=Gtk.Align.CENTER)
         btn.connect("clicked", lambda *_: self._run_test())
         test.add_suffix(btn)
         group.add(test)
@@ -331,7 +340,7 @@ class Window(Adw.ApplicationWindow):
         self.cfg.update(PRESETS[name])
         self.cfg = config.save(self.cfg)
         self._load_into_widgets()
-        self._toast(f"Kennlinie „{name}“ übernommen")
+        self._toast(_("Curve “{name}” applied").format(name=PRESET_LABELS[name]))
 
     # ------------------------------------------------------------- simulation
 
@@ -342,7 +351,7 @@ class Window(Adw.ApplicationWindow):
             self._loading = True
             row.set_active(False)
             self._loading = False
-            self._toast("Erst den LED-Test abwarten")
+            self._toast(_("Wait for the LED test to finish"))
             return
         self.sim_scale.set_sensitive(active)
         if active:
@@ -354,14 +363,14 @@ class Window(Adw.ApplicationWindow):
             except OSError as exc:
                 self._sim_wheel = None
                 config.unpause()
-                self._toast(f"Lenkrad nicht erreichbar: {exc}")
+                self._toast(_("Wheel not reachable: {error}").format(error=exc))
                 self._loading = True
                 row.set_active(False)
                 self._loading = False
                 self.sim_scale.set_sensitive(False)
                 return
             self._renew = GLib.timeout_add_seconds(1, self._renew_pause)
-            self._toast("Dienst pausiert — der Regler steuert die LEDs")
+            self._toast(_("Service paused — the slider drives the LEDs"))
         else:
             self._release_sim()
         self._update_sim_banner()
@@ -370,12 +379,12 @@ class Window(Adw.ApplicationWindow):
         """Simulation left switched on looks exactly like a broken daemon: the
         LEDs stop following the game. Say so, permanently, while it is active."""
         if self.row_sim.get_active():
-            self.banner.set_title("Simulation aktiv — die LEDs folgen dem Regler, "
-                                  "nicht dem Spiel")
-            self.banner.set_button_label("Beenden")
+            self.banner.set_title(_("Simulation active — the LEDs follow the "
+                                    "slider, not the game"))
+            self.banner.set_button_label(_("Stop"))
             self.banner.set_revealed(True)
         else:
-            self.banner.set_button_label("Journal zeigen")
+            self.banner.set_button_label(_("Show journal"))
             self.banner.set_revealed(False)
 
     def _renew_pause(self):
@@ -420,9 +429,9 @@ class Window(Adw.ApplicationWindow):
             self._update_sim_banner()
         elif failed:
             detail = self.svc.failure_detail()
-            self.banner.set_title("Der Dienst ist fehlgeschlagen"
+            self.banner.set_title(_("The service has failed")
                                   + (f" — {detail}" if detail else ""))
-            self.banner.set_button_label("Journal zeigen")
+            self.banner.set_button_label(_("Show journal"))
             self.banner.set_revealed(True)
         else:
             self.banner.set_revealed(False)
@@ -452,7 +461,9 @@ class Window(Adw.ApplicationWindow):
 
         if self.row_sim.get_active():
             frac = self._sim_value
-            self.lbl_rpm.set_label(f"Simulation — {frac * 100:.0f} % der Maximaldrehzahl")
+            self.lbl_rpm.set_label(
+                _("Simulation — {percent:.0f} % of maximum RPM").format(
+                    percent=frac * 100))
         elif sample:
             rpm, mx, gear, throttle = sample
             frac = rpm / mx if mx else 0.0
@@ -461,25 +472,27 @@ class Window(Adw.ApplicationWindow):
                 self._update_threshold_texts()
             gear_text = "N" if gear == 0 else ("R" if gear < 0 else str(gear))
             self.lbl_rpm.set_label(
-                f"{rpm:,.0f} von {mx:,.0f} U/min  ·  {frac * 100:.0f} %  ·  "
-                f"Gang {gear_text}  ·  Gas {throttle * 100:.0f} %".replace(",", "."))
+                _("{rpm} of {max} rpm  ·  {percent:.0f} %  ·  gear {gear}  ·  "
+                  "throttle {throttle:.0f} %").format(
+                      rpm=f"{rpm:,.0f}", max=f"{mx:,.0f}", percent=frac * 100,
+                      gear=gear_text, throttle=throttle * 100))
         else:
             frac = None
-            self.lbl_rpm.set_label("keine Telemetrie — sitzt du im Auto?")
+            self.lbl_rpm.set_label(_("no telemetry — are you in the car?"))
 
         # candidate_fds() forks pgrep, so it must not run at preview rate.
         now = time.monotonic()
         if sample:
-            self.row_game.set_subtitle("Telemetrie wird empfangen")
+            self.row_game.set_subtitle(_("receiving telemetry"))
             self.game_icon.set_from_icon_name("emblem-ok-symbolic")
             self._game_checked = now
         elif now - getattr(self, "_game_checked", 0.0) > 1.0:
             self._game_checked = now
             if daemon.candidate_fds():
-                self.row_game.set_subtitle("läuft, aber kein Auto auf der Strecke")
+                self.row_game.set_subtitle(_("running, but no car on track"))
                 self.game_icon.set_from_icon_name("content-loading-symbolic")
             else:
-                self.row_game.set_subtitle("nicht gestartet")
+                self.row_game.set_subtitle(_("not started"))
                 self.game_icon.set_from_icon_name("applications-games-symbolic")
 
         if frac is None:
@@ -523,8 +536,8 @@ class Window(Adw.ApplicationWindow):
         for row, key in pairs:
             base = self._spin_texts[row]
             if mx:
-                row.set_subtitle(f"{base} — {self.cfg[key] * mx:,.0f} U/min"
-                                 .replace(",", "."))
+                row.set_subtitle(_("{base} — {rpm} rpm").format(
+                    base=base, rpm=f"{self.cfg[key] * mx:,.0f}"))
             else:
                 row.set_subtitle(base)
 
@@ -616,12 +629,12 @@ class Window(Adw.ApplicationWindow):
 
         # Give the daemon one poll interval to notice the pause first.
         state["delay"] = GLib.timeout_add(300, begin)
-        self._toast("LED-Test läuft …")
+        self._toast(_("LED test running …"))
 
     def _show_journal(self):
         """Live journal view — keeps following while the dialog is open."""
-        dialog = Adw.AlertDialog(heading="Journal",
-                                 body="Meldungen des Dienstes, laufend")
+        dialog = Adw.AlertDialog(heading=_("Journal"),
+                                 body=_("Service messages, live"))
         view = Gtk.TextView(editable=False, monospace=True, top_margin=6,
                             left_margin=6, right_margin=6, bottom_margin=6,
                             wrap_mode=Gtk.WrapMode.WORD_CHAR)
@@ -629,7 +642,7 @@ class Window(Adw.ApplicationWindow):
         scroll = Gtk.ScrolledWindow(min_content_height=340, min_content_width=600)
         scroll.set_child(view)
         dialog.set_extra_child(scroll)
-        dialog.add_response("close", "Schließen")
+        dialog.add_response("close", _("Close"))
 
         def append(_tail, line):
             buf.insert(buf.get_end_iter(), line + "\n")

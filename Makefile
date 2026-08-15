@@ -13,10 +13,11 @@ UNITDIR      = $(DESTDIR)$(PREFIX)/lib/systemd/user
 UDEVDIR      = $(DESTDIR)$(PREFIX)/lib/udev/rules.d
 APPSDIR      = $(DESTDIR)$(PREFIX)/share/applications
 METAINFODIR  = $(DESTDIR)$(PREFIX)/share/metainfo
+LOCALEDIR    = $(DESTDIR)$(PREFIX)/share/locale
 ICONDIR      = $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps
 
 MODULES      = lmu_rpm_leds.py lmu_led_config.py moza.py config.py \
-               service.py ledview.py
+               service.py ledview.py i18n.py
 # Shipped for troubleshooting. verify_protocol.py stays out of the package on
 # purpose: it compares against boxflat's own encoder and therefore needs boxflat
 # installed as a Flatpak, which no user should have to do to run the daemon.
@@ -25,10 +26,36 @@ MODULES      = lmu_rpm_leds.py lmu_led_config.py moza.py config.py \
 TOOLS        = find_rpm.py led_test.py led_map.py
 DEVTOOLS     = verify_protocol.py
 
-.PHONY: all install uninstall check clean
+DOMAIN       = lmu-rpm-leds
+LINGUAS      = de
+MO           = $(LINGUAS:%=locale/%/LC_MESSAGES/$(DOMAIN).mo)
+SOURCES      = $(MODULES) $(TOOLS)
 
-all:
-	@echo "Nothing to build — run 'sudo make install'."
+.PHONY: all install uninstall check clean locale pot update-po
+
+all: locale
+	@echo "Catalogues built. Run 'sudo make install' to install."
+
+# Compiled catalogues. Built into ./locale so a source checkout is translated
+# too — i18n.py prefers that directory and falls back to the system one.
+locale: $(MO)
+
+locale/%/LC_MESSAGES/$(DOMAIN).mo: po/%.po
+	@mkdir -p $(dir $@)
+	msgfmt --check -o $@ $<
+
+# Regenerate the template after touching any user-visible string.
+pot:
+	xgettext --language=Python --keyword=_ --keyword=ngettext:1,2 \
+	  --package-name=$(DOMAIN) --package-version=1.0.0 \
+	  --copyright-holder="Florian Pauker" \
+	  --msgid-bugs-address="https://github.com/fpauker/lmu-rpm-leds/issues" \
+	  --from-code=UTF-8 --add-comments=TRANSLATORS \
+	  -o po/$(DOMAIN).pot $(SOURCES)
+
+# Merge new strings into the existing translations.
+update-po: pot
+	@for l in $(LINGUAS); do msgmerge --update --backup=none po/$$l.po po/$(DOMAIN).pot; done
 
 check:
 	@for f in $(MODULES) $(TOOLS) $(DEVTOOLS); do python3 -m py_compile $$f || exit 1; done
@@ -54,6 +81,10 @@ install:
 	install -m 0644 data/$(APPID).desktop $(APPSDIR)/
 	install -m 0644 data/$(APPID).metainfo.xml $(METAINFODIR)/
 	install -m 0644 data/$(APPID).svg $(ICONDIR)/
+	@for l in $(LINGUAS); do \
+	    install -d $(LOCALEDIR)/$$l/LC_MESSAGES; \
+	    msgfmt --check -o $(LOCALEDIR)/$$l/LC_MESSAGES/$(DOMAIN).mo po/$$l.po; \
+	done
 
 uninstall:
 	rm -rf $(LIBDIR)
@@ -63,6 +94,7 @@ uninstall:
 	rm -f $(APPSDIR)/$(APPID).desktop
 	rm -f $(METAINFODIR)/$(APPID).metainfo.xml
 	rm -f $(ICONDIR)/$(APPID).svg
+	@for l in $(LINGUAS); do rm -f $(LOCALEDIR)/$$l/LC_MESSAGES/$(DOMAIN).mo; done
 
 clean:
-	rm -rf __pycache__ *.pyc
+	rm -rf __pycache__ *.pyc locale
