@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Build artefacts
+/build/
+/dist/
+*.rpm
+*.tar.gz
+*.src.rpm

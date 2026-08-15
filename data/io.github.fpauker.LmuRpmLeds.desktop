@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=MOZA RPM LEDs
+Name[de]=MOZA RPM-LEDs
+GenericName=Wheel Rev Lights
+GenericName[de]=Lenkrad-Drehzahlanzeige
+Comment=Set the rev-light curve of a MOZA wheelbase and watch the daemon that feeds it
+Comment[de]=Kennlinie der RPM-LEDs einer MOZA-Wheelbase einstellen und den Dienst überwachen
+Exec=lmu-rpm-leds
+TryExec=lmu-rpm-leds
+Icon=io.github.fpauker.LmuRpmLeds
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=MOZA;LED;RPM;sim racing;wheelbase;rev lights;telemetry;Le Mans Ultimate;LMU;
+Keywords[de]=MOZA;LED;RPM;Sim Racing;Wheelbase;Schaltblitz;Drehzahl;Telemetrie;Lenkrad;Le Mans Ultimate;LMU;
+StartupNotify=true
+StartupWMClass=io.github.fpauker.LmuRpmLeds
+SingleMainWindow=true

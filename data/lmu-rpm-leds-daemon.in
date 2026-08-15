@@ -1,0 +1,15 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# lmu-rpm-leds — daemon entry point
+#
+# exec, not a plain call: systemd stops the service with SIGTERM, and the
+# daemon turns SIGTERM into a clean shutdown that darkens the LED bar and hands
+# control of the lights back to the wheelbase. Without exec the shell dies on
+# the SIGTERM, the Python child is orphaned and never runs its cleanup, and the
+# bar stays frozen until TimeoutStopSec expires into a SIGKILL. If you ever
+# remove the exec, ExecStart= must be pointed at the interpreter instead.
+#
+# @PYTHON@ is the distribution interpreter even though the daemon itself is
+# standard-library only: a packaged file must not resolve its interpreter
+# through the caller's PATH.
+exec @PYTHON@ @LIBDIR@/lmu_rpm_leds.py "$@"

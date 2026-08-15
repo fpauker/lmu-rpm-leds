@@ -1,0 +1,28 @@
+[Unit]
+Description=Feed RPM LEDs on the Moza wheel from Le Mans Ultimate telemetry
+Documentation=https://github.com/fpauker/lmu-rpm-leds
+
+[Service]
+Type=simple
+ExecStart=@BINDIR@/lmu-rpm-leds-daemon
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=5
+# The daemon opens the wheelbase lazily and retries every 3 s (Wheel.RETRY),
+# and it scans for the game on each pass, so neither the game nor the
+# wheelbase has to be present at start.
+
+# Deliberately sparse hardening. The service already runs as the user; the
+# options below cost nothing and close real failure paths:
+NoNewPrivileges=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+# Not set: ProtectHome= (configuration lives in ~/.config), ProtectProc= and
+# PrivateUsers= (telemetry is read from /proc/<pid>/fd of the Proton
+# processes). PrivateTmp= is left off as well, but note it would in fact be
+# harmless: the pause lease lives in $XDG_RUNTIME_DIR (config.pause_path()),
+# which PrivateTmp= does not namespace — it only covers /tmp and /var/tmp.
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,13 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# lmu-rpm-leds — configuration GUI entry point
+#
+# @PYTHON@ is substituted at install time and must be the distribution
+# interpreter: the GUI needs PyGObject, pycairo and the GTK 4 and libadwaita
+# typelibs, and a python3 earlier in PATH (pyenv, conda, homebrew/linuxbrew)
+# does not have them.
+#
+# The modules stay flat in @LIBDIR@. Python puts the script's own directory at
+# sys.path[0], and the entry module additionally inserts it explicitly, so no
+# PYTHONPATH is needed here.
+exec @PYTHON@ @LIBDIR@/lmu_led_config.py "$@"

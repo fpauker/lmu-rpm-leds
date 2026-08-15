@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# lmu-rpm-leds — access to the Moza wheelbase control port
+#
+# Moza (Gudsen, USB vendor 346e) wheelbases expose their control channel as a
+# USB CDC-ACM serial port. lmu-rpm-leds writes RPM LED frames to it and has to
+# open it as the desktop user.
+#
+# uaccess hands the port to whoever holds the active session on the device's
+# seat, and takes it back on logout or user switch. No group membership to set
+# up, no world-writable device node. The tag has to be set before
+# 73-seat-late.rules, which is what actually runs the uaccess builtin — hence
+# the 70- prefix, the same one systemd's own 70-uaccess.rules uses.
+#
+# NOTE the deliberate absence of ACTION=="add". logind re-applies uaccess ACLs
+# on session changes only for devices that carry uaccess in CURRENT_TAGS, and
+# CURRENT_TAGS is rebuilt from scratch on every uevent. A rule restricted to
+# ACTION=="add" therefore drops the tag on the next change/bind event, and from
+# then on the ACL is frozen at whoever was active when the device appeared —
+# on a GNOME box that is the gdm greeter, so the desktop user never gets in.
+# Do not "harmonise" this rule with boxflat by adding ACTION=="add".
+#
+# Coexists with boxflat's 99-boxflat.rules: different file name, so neither
+# overrides the other, and TAG+= is additive. This file deliberately sets no
+# MODE= and no GROUP=, so it never fights boxflat over the permission bits of
+# the same node — and it never makes the port world-writable.
+
+ACTION=="remove", GOTO="lmu_rpm_leds_end"
+ENV{MAJOR}=="", GOTO="lmu_rpm_leds_end"
+
+# All Gudsen CDC-ACM ports, not just the base. Narrowing this to
+# ATTRS{product}=="*Base*" was tried and rejected: it buys no security (uaccess
+# only ever hands the node to the user already sitting at the seat, and that
+# user owns the pedals node anyway), but it turns every wheelbase whose USB
+# product string does not literally contain "Base" into a silent
+# permission-denied. boxflat's own base matcher accepts three name forms —
+# "... base", "... ultra base" and "... racing wheel and pedals" — and the last
+# one has no "Base" in it at all.
+SUBSYSTEM=="tty", KERNEL=="ttyACM*", ATTRS{idVendor}=="346e", TAG+="uaccess"
+
+LABEL="lmu_rpm_leds_end"

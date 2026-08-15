@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Florian Pauker -->
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>io.github.fpauker.LmuRpmLeds</id>
+
+  <name>MOZA RPM LEDs</name>
+  <name xml:lang="de">MOZA RPM-LEDs</name>
+
+  <summary>Drive the rev lights of a MOZA wheelbase from Le Mans Ultimate</summary>
+  <summary xml:lang="de">Die RPM-LEDs einer MOZA-Wheelbase aus Le Mans Ultimate speisen</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <developer id="io.github.fpauker">
+    <name>Florian Pauker</name>
+  </developer>
+
+  <description>
+    <p>
+      On Windows, MOZA Pit House lights up the rev LEDs in the wheel rim from
+      the game you are driving. There is no Linux build of it, so on Linux the
+      LEDs stay dark. This program closes that gap for Le Mans Ultimate: a small
+      daemon reads the engine speed out of the running game and sends it to the
+      wheelbase over its serial protocol, so the rev lights follow the engine
+      exactly as they do on Windows.
+    </p>
+    <p xml:lang="de">
+      Unter Windows speist MOZA Pit House die RPM-LEDs im Lenkradkranz aus dem
+      Spiel. Für Linux gibt es das Programm nicht, dort bleiben die LEDs also
+      dunkel. Dieses Programm schließt die Lücke für Le Mans Ultimate: Ein
+      kleiner Dienst liest die Drehzahl aus dem laufenden Spiel und schickt sie
+      über das serielle Protokoll an die Wheelbase, sodass die LEDs dem Motor
+      genauso folgen wie unter Windows.
+    </p>
+    <p>
+      The bundled GTK4 configuration app shapes the rev-light curve and shows
+      the result on the real wheel while you set it — no need to drive a lap to
+      check whether the thresholds feel right.
+    </p>
+    <p xml:lang="de">
+      Die mitgelieferte GTK4-App stellt die Kennlinie ein und zeigt das Ergebnis
+      dabei am echten Lenkrad — man muss also keine Runde fahren, um zu prüfen,
+      ob die Schwellen passen.
+    </p>
+    <ul>
+      <li>Reads Le Mans Ultimate telemetry under Proton, without a game plugin, SimHub or any other third-party tool</li>
+      <li xml:lang="de">Liest die Telemetrie von Le Mans Ultimate unter Proton, ohne Spiel-Plugin, SimHub oder sonstige Fremdsoftware</li>
+      <li>Drives the RPM LEDs of MOZA wheelbases over USB serial, developed and tested on an R9 Base</li>
+      <li xml:lang="de">Steuert die RPM-LEDs von MOZA-Wheelbases über USB-Seriell, entwickelt und getestet an einer R9 Base</li>
+      <li>Runs unattended as a systemd user service and waits for the game to start on its own</li>
+      <li xml:lang="de">Läuft unbeaufsichtigt als systemd-User-Dienst und wartet selbstständig auf den Spielstart</li>
+      <li>Adjustable curve: first LED, full bar and blink threshold, applied live without a restart</li>
+      <li xml:lang="de">Einstellbare Kennlinie: erste LED, voller Balken und Blinkschwelle, sofort wirksam ohne Neustart</li>
+      <li>Shows the thresholds in RPM of the car you are currently driving, not just as a percentage</li>
+      <li xml:lang="de">Zeigt die Schwellen in U/min des gerade gefahrenen Autos, nicht nur in Prozent</li>
+    </ul>
+    <p>
+      A MOZA wheelbase connected over USB is required. The daemon itself uses
+      nothing but the Python standard library.
+    </p>
+    <p xml:lang="de">
+      Vorausgesetzt wird eine über USB angeschlossene MOZA-Wheelbase. Der Dienst
+      selbst kommt mit der Python-Standardbibliothek aus.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.fpauker.LmuRpmLeds.desktop</launchable>
+
+  <url type="homepage">https://github.com/fpauker/lmu-rpm-leds</url>
+  <url type="bugtracker">https://github.com/fpauker/lmu-rpm-leds/issues</url>
+  <url type="vcs-browser">https://github.com/fpauker/lmu-rpm-leds</url>
+
+  <!--
+    PLATZHALTER — vor der ersten Veroeffentlichung ausfuellen und einkommentieren.
+    Ohne Screenshots zeigt GNOME Software nur eine graue Flaeche.
+    Die URLs muessen direkt auf die Bilddatei zeigen (PNG von raw.githubusercontent.com),
+    NICHT auf github.com/.../blob/... — das liefert HTML.
+    width/height muessen die TATSAECHLICHEN Pixelmasse der Datei sein; die Werte
+    unten sind geraten (Fenster 680x900 bei Scale 2). Vorher mit
+    'identify datei.png' bzw. 'file datei.png' nachsehen und eintragen.
+    Der Ordner data/screenshots/ existiert im Repo noch nicht und muss angelegt werden.
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The rev-light curve with a live preview of the bar</caption>
+      <caption xml:lang="de">Die Kennlinie mit Live-Vorschau des LED-Balkens</caption>
+      <image type="source" width="1360" height="1800">https://raw.githubusercontent.com/fpauker/lmu-rpm-leds/v1.0.0/data/screenshots/curve.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Service status and autostart</caption>
+      <caption xml:lang="de">Dienststatus und Autostart</caption>
+      <image type="source" width="1360" height="1800">https://raw.githubusercontent.com/fpauker/lmu-rpm-leds/v1.0.0/data/screenshots/service.png</image>
+    </screenshot>
+  </screenshots>
+  -->
+
+  <!--
+    Settings + HardwareSettings ist fuer ein Hardware-Konfigurationswerkzeug
+    semantisch richtig (gleiche Kombination wie Piper), hat aber einen Preis:
+    das AppStream-Standardkategorienset kennt keine Rubrik "Settings", die App
+    ist in GNOME Software also NUR ueber die Suche auffindbar, nicht in einer
+    Kategorie-Kachel. Wer im Software-Center gefunden werden will, nimmt
+    stattdessen <category>Game</category> (allein, NICHT zusammen mit Settings).
+    Im GNOME-App-Grid erscheint die App in beiden Faellen.
+  -->
+  <categories>
+    <category>Settings</category>
+    <category>HardwareSettings</category>
+  </categories>
+
+  <keywords>
+    <keyword>MOZA</keyword>
+    <keyword>RPM</keyword>
+    <keyword>LED</keyword>
+    <keyword>sim racing</keyword>
+    <keyword>wheelbase</keyword>
+    <keyword>rev lights</keyword>
+    <keyword>telemetry</keyword>
+    <keyword>Le Mans Ultimate</keyword>
+    <keyword>LMU</keyword>
+    <!--
+      ACHTUNG: eine uebersetzte Keyword-Liste ERSETZT die unuebersetzte
+      vollstaendig, sie ergaenzt sie nicht. Die deutsche Liste muss daher
+      alle Begriffe enthalten, die auch auf Deutsch gesucht werden.
+    -->
+    <keyword xml:lang="de">MOZA</keyword>
+    <keyword xml:lang="de">RPM</keyword>
+    <keyword xml:lang="de">LED</keyword>
+    <keyword xml:lang="de">Sim Racing</keyword>
+    <keyword xml:lang="de">Wheelbase</keyword>
+    <keyword xml:lang="de">Schaltblitz</keyword>
+    <keyword xml:lang="de">Drehzahl</keyword>
+    <keyword xml:lang="de">Telemetrie</keyword>
+    <keyword xml:lang="de">Lenkrad</keyword>
+    <keyword xml:lang="de">Le Mans Ultimate</keyword>
+    <keyword xml:lang="de">LMU</keyword>
+  </keywords>
+
+  <provides>
+    <binary>lmu-rpm-leds</binary>
+    <binary>lmu-rpm-leds-daemon</binary>
+  </provides>
+
+  <recommends>
+    <!--
+      display_length misst per Voreinstellung die KUERZESTE Bildschirmseite.
+      Das Fenster ist 680x900 (lmu_led_config.py:81), die bindende Groesse ist
+      also 900, nicht 768: bei 768 wuerde ein 1366x768- oder 1280x800-Schirm die
+      Bedingung erfuellen, obwohl das Fenster dort nicht hineinpasst.
+    -->
+    <display_length compare="ge">900</display_length>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <!-- Gudsen/MOZA, Hersteller-ID 346e. Verifiziert gegen die echte R9 Base:
+         usb:v346Ep0002d0100dcEFdsc02dp01ic02isc02ip00in00 -->
+    <modalias>usb:v346Ep*</modalias>
+  </recommends>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <!-- Datum beim tatsaechlichen Tag anpassen. -->
+    <release version="1.0.0" date="2026-08-15" type="stable">
+      <description>
+        <p>First public release.</p>
+        <p xml:lang="de">Erste öffentliche Veröffentlichung.</p>
+      </description>
+    </release>
+  </releases>
+
+</component>
