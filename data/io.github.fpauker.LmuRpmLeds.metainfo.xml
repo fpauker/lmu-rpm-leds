@@ -161,6 +161,19 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.1.0" date="2026-08-16" type="stable">
+      <description>
+        <p>English as a second language. The rev bar can fill from both ends
+           inward, and the curve now scales to what each gear actually revs to,
+           so it works in the tall gears where the car never reaches the
+           limiter.</p>
+        <p xml:lang="de">Englisch als zweite Sprache. Der Balken kann von beiden
+           Seiten nach innen wachsen, und die Kennlinie skaliert jetzt auf die
+           Drehzahl, die der jeweilige Gang wirklich erreicht — damit
+           funktioniert sie auch in den langen Gängen, die den Begrenzer nie
+           sehen.</p>
+      </description>
+    </release>
     <!-- Datum beim tatsaechlichen Tag anpassen. -->
     <release version="1.0.0" date="2026-08-15" type="stable">
       <description>

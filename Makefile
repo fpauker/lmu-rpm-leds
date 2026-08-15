@@ -47,7 +47,7 @@ locale/%/LC_MESSAGES/$(DOMAIN).mo: po/%.po
 # Regenerate the template after touching any user-visible string.
 pot:
 	xgettext --language=Python --keyword=_ --keyword=ngettext:1,2 \
-	  --package-name=$(DOMAIN) --package-version=1.0.0 \
+	  --package-name=$(DOMAIN) --package-version=1.1.0 \
 	  --copyright-holder="Florian Pauker" \
 	  --msgid-bugs-address="https://github.com/fpauker/lmu-rpm-leds/issues" \
 	  --from-code=UTF-8 --add-comments=TRANSLATORS \

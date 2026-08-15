@@ -1,5 +1,5 @@
 Name:           lmu-rpm-leds
-Version:        1.0.0
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        Drive the rev lights of a MOZA wheel from Le Mans Ultimate
 
@@ -82,5 +82,13 @@ appstreamcli validate --no-net --explain \
 %{_datadir}/icons/hicolor/scalable/apps/io.github.fpauker.LmuRpmLeds.svg
 
 %changelog
+* Sun Aug 16 2026 Florian Pauker <38747890+fpauker@users.noreply.github.com> - 1.1.0-1
+- English as a second language, alongside German
+- Rev bar can fill from both ends inward instead of left to right
+- Curve scales to what each gear actually revs to, so the bar works in the
+  tall gears where the car never reaches the limiter
+- Flashing no longer chatters when the revs sit on the blink threshold
+- A frozen telemetry buffer is detected by the session clock, not the revs
+
 * Sat Aug 15 2026 Florian Pauker <38747890+fpauker@users.noreply.github.com> - 1.0.0-1
 - First public release
