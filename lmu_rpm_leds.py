@@ -52,6 +52,10 @@ HDR_LEN = 4  # activeVehicles, playerVehicleIdx, playerHasVehicle, pad
 
 GAME_PROCS = ("PluginsAdapter.exe", "Le Mans Ultimate.exe")
 
+# How far below the blink threshold the revs must fall before flashing stops,
+# as a fraction of the limiter.
+BLINK_HYSTERESIS = 0.015
+
 
 def candidate_fds():
     """Wine memfd mappings of the running game and its plugin host."""
@@ -277,14 +281,39 @@ class Wheel:
             pass
 
 
-def leds_for(rpm, maxrpm, start, end, leds):
-    """Bitmask for the rev bar; below `start` of the limiter nothing is lit."""
-    frac = rpm / maxrpm
+def leds_lit(frac, start, end, leds):
+    """How many LEDs the curve calls for at this fraction of the limiter."""
     if frac < start:
         return 0
     span = max(end - start, 1e-6)
-    lit = min(leds, int((frac - start) / span * leds) + 1)
+    return min(leds, int((frac - start) / span * leds) + 1)
+
+
+def mask_for(lit, leds, mode="bar"):
+    """Turn a count of lit LEDs into the bitmask for that fill style.
+
+    bar     fills left to right, the usual rev bar.
+    center  grows inward from both ends and meets in the middle. With an odd
+            count the left side takes the extra LED, so the bar never jumps
+            sideways as it fills.
+    """
+    if lit <= 0:
+        return 0
+    if lit >= leds:
+        return (1 << leds) - 1
+    if mode == "center":
+        left = (lit + 1) // 2
+        right = lit // 2
+        mask = (1 << left) - 1
+        for i in range(right):
+            mask |= 1 << (leds - 1 - i)
+        return mask
     return (1 << lit) - 1
+
+
+def leds_for(rpm, maxrpm, start, end, leds, mode="bar"):
+    """Bitmask for the rev bar; below `start` of the limiter nothing is lit."""
+    return mask_for(leds_lit(rpm / maxrpm, start, end, leds), leds, mode)
 
 
 def main():
@@ -327,6 +356,7 @@ def main():
     last_good = 0.0        # when the session clock last advanced
     last_elapsed = None
     blink_phase = False
+    blinking = False
     blink_at = 0.0
     last_cfg_poll = 0.0
     print(_("Running. Ctrl+C to stop."))
@@ -407,8 +437,22 @@ def main():
                     last_elapsed = tele.elapsed
                     last_good = now
                 leds = cfg["leds"]
-                mask = leds_for(rpm, mx, cfg["start"], cfg["end"], leds)
-                if rpm / mx >= cfg["blink"]:
+                frac = rpm / mx
+                mask = mask_for(leds_lit(frac, cfg["start"], cfg["end"], leds),
+                                leds, cfg["mode"])
+
+                # Hysteresis on the blink threshold. Sitting on the limiter in
+                # the top gear the revs bounce across it many times a second,
+                # and without this the bar alternates between flashing and
+                # showing the plain bar — which reads as a broken display.
+                # Once flashing, it keeps flashing until the revs drop a clear
+                # step below the threshold.
+                if frac >= cfg["blink"]:
+                    blinking = True
+                elif frac < cfg["blink"] - BLINK_HYSTERESIS:
+                    blinking = False
+
+                if blinking:
                     if now - blink_at > 0.5 / cfg["blink_hz"]:
                         blink_phase = not blink_phase
                         blink_at = now

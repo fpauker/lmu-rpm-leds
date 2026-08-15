@@ -243,6 +243,13 @@ class Window(Adw.ApplicationWindow):
         self.chart.set_margin_end(8)
         group.add(chart_row)
 
+        self.row_mode = Adw.ComboRow(
+            title=_("Fill style"),
+            subtitle=_("how the bar grows as the revs rise"),
+            model=Gtk.StringList.new([_("Left to right"), _("From both ends")]))
+        self.row_mode.connect("notify::selected", self._on_widget_changed)
+        group.add(self.row_mode)
+
         self.row_start = self._spin(_("First LED"),
                                     _("the first LED lights from here"), 30, 100, 1)
         self.row_end = self._spin(_("All LEDs"),
@@ -318,6 +325,7 @@ class Window(Adw.ApplicationWindow):
         self.row_rate.set_value(self.cfg["rate"])
         self.row_leds.set_value(self.cfg["leds"])
         self.row_legacy.set_active(self.cfg["legacy"])
+        self.row_mode.set_selected(config.MODES.index(self.cfg["mode"]))
         self._loading = False
         self._redraw()
 
@@ -332,6 +340,7 @@ class Window(Adw.ApplicationWindow):
             "rate": self.row_rate.get_value(),
             "leds": int(self.row_leds.get_value()),
             "legacy": self.row_legacy.get_active(),
+            "mode": config.MODES[self.row_mode.get_selected()],
         })
         self.cfg = config.save(self.cfg)
         self._redraw()
@@ -498,7 +507,9 @@ class Window(Adw.ApplicationWindow):
         if frac is None:
             mask = 0
         else:
-            mask = daemon.leds_for(frac, 1.0, cfg["start"], cfg["end"], leds)
+            mask = daemon.mask_for(
+                daemon.leds_lit(frac, cfg["start"], cfg["end"], leds),
+                leds, cfg["mode"])
             if frac >= cfg["blink"]:
                 now = time.monotonic()
                 if now - self._blink_at > 0.5 / cfg["blink_hz"]:
@@ -581,9 +592,11 @@ class Window(Adw.ApplicationWindow):
         if not self._renew:
             self._renew = GLib.timeout_add_seconds(1, self._renew_pause)
 
-        leds = self.cfg["leds"]
-        steps = [(1 << n) - 1 for n in range(leds + 1)]
-        steps += [(1 << n) - 1 for n in reversed(range(leds))]
+        # The sweep uses the configured fill style, so the test shows what
+        # driving will actually look like.
+        leds, mode = self.cfg["leds"], self.cfg["mode"]
+        steps = [daemon.mask_for(n, leds, mode) for n in range(leds + 1)]
+        steps += [daemon.mask_for(n, leds, mode) for n in reversed(range(leds))]
         state = {"i": 0}
 
         def finish():

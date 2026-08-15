@@ -21,12 +21,15 @@ DEFAULTS = {
     "blink_hz": 8.0,    # flashing speed
     "rate": 50.0,       # telemetry polls per second
     "leds": 10,         # LEDs on the rim
+    "mode": "bar",      # "bar" fills left to right, "center" from both ends
     "legacy": False,    # use the old telemetry command id
     "enabled": True,    # feed the LEDs at all
 }
 
 # Sanity ranges; anything outside is clamped rather than rejected, so a hand
 # edited file can never brick the daemon.
+MODES = ("bar", "center")
+
 LIMITS = {
     "start": (0.0, 1.0),
     "end": (0.0, 1.2),
@@ -62,6 +65,9 @@ def sanitise(raw):
                 low, high = LIMITS[key]
                 value = max(low, min(high, value))
             cfg[key] = value
+
+    if cfg["mode"] not in MODES:
+        cfg["mode"] = DEFAULTS["mode"]
 
     # The curve must stay monotonic or the bar maths break down.
     if cfg["end"] <= cfg["start"]:
