@@ -31,12 +31,12 @@ def sweep(send, label):
         send((1 << i) - 1)
         time.sleep(0.12)
     print(_("    Chase ..."))
-    for _ in range(2):
+    for _pass in range(2):   # not "_": that is the translation function
         for i in range(moza.RPM_LEDS):
             send(1 << i)
             time.sleep(0.06)
     print(_("    Flashing (all) ..."))
-    for _ in range(3):
+    for _pass in range(3):
         send((1 << moza.RPM_LEDS) - 1)
         time.sleep(0.2)
         send(0)

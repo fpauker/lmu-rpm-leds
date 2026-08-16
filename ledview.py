@@ -105,27 +105,32 @@ def draw_curve(cr, width, height, cfg, marker=None, dark=True):
     cr.move_to(2, sy(0) + 4)
     cr.show_text("0")
 
-    # the staircase itself
+    # The staircase, drawn from its actual step edges rather than by sampling
+    # the curve: it has exactly `total` steps, so there is nothing to
+    # approximate, and one stroke per step instead of a few hundred keeps the
+    # repaint cheap enough to run at preview rate.
     start, end = cfg["start"], cfg["end"]
     span = max(end - start, 1e-6)
-    steps = 240
     cr.set_line_width(2.5)
-    prev = None
-    for i in range(steps + 1):
-        frac = LOW + (HIGH - LOW) * i / steps
-        if frac < start:
-            lit = 0
-        else:
-            lit = min(total, int((frac - start) / span * total) + 1)
-        x, y = sx(frac), sy(lit)
-        if prev is not None:
-            cr.move_to(prev[0], prev[1])
-            cr.line_to(x, prev[1])
-            cr.line_to(x, y)
-            colour = led_colour(max(lit - 1, 0), total)
-            cr.set_source_rgb(*colour)
-            cr.stroke()
-        prev = (x, y)
+
+    # the dark stretch below the first LED
+    cr.set_source_rgba(*fg, 0.35)
+    cr.move_to(sx(LOW), sy(0))
+    cr.line_to(sx(min(start, HIGH)), sy(0))
+    cr.stroke()
+
+    for step in range(total):
+        frac_from = start + span * step / total
+        frac_to = start + span * (step + 1) / total if step < total - 1 else HIGH
+        if frac_from > HIGH:
+            break
+        x0, x1 = sx(max(frac_from, LOW)), sx(min(frac_to, HIGH))
+        y = sy(step + 1)
+        cr.set_source_rgb(*led_colour(step, total))
+        cr.move_to(x0, sy(step))    # the riser
+        cr.line_to(x0, y)
+        cr.line_to(x1, y)           # the tread
+        cr.stroke()
 
     # thresholds
     for frac, label, rgb in ((start, "Start", (0.20, 0.85, 0.35)),

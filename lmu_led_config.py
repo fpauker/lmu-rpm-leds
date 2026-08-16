@@ -108,6 +108,8 @@ class Window(Adw.ApplicationWindow):
         self._blink_at = 0.0
         self._preview_mask = 0
         self._live_frac = None
+        self._drawn_bar = None      # what the two areas currently show
+        self._drawn_chart = None
         self._last_maxrpm = None
 
         self.toasts = Adw.ToastOverlay()
@@ -547,16 +549,39 @@ class Window(Adw.ApplicationWindow):
 
         self._live_frac = frac
         self._preview_mask = mask
-        self.bar.queue_draw()
-        self.chart.queue_draw()
+        self._redraw_changed()
         return True
 
     # ---------------------------------------------------------------- drawing
 
     def _redraw(self):
-        self.bar.queue_draw()
-        self.chart.queue_draw()
+        """Force both areas to repaint, after a settings change."""
+        self._drawn_bar = self._drawn_chart = None
+        self._redraw_changed()
         self._update_threshold_texts()
+
+    def _redraw_changed(self):
+        """Repaint only what actually differs from what is on screen.
+
+        The preview ticks twenty times a second. Redrawing unconditionally
+        kept a CPU core a fifth busy while the window just sat there, because
+        the curve is a few hundred Cairo segments and was rebuilt every tick
+        whether or not anything had moved.
+        """
+        cfg = self.cfg
+        bar_state = (self._preview_mask, cfg["leds"])
+        if bar_state != self._drawn_bar:
+            self._drawn_bar = bar_state
+            self.bar.queue_draw()
+
+        # The marker only needs redrawing when it would land on a different
+        # pixel, so a slowly climbing needle does not force a full repaint per
+        # tick.
+        marker = None if self._live_frac is None else round(self._live_frac, 3)
+        chart_state = (cfg["start"], cfg["end"], cfg["blink"], cfg["leds"], marker)
+        if chart_state != self._drawn_chart:
+            self._drawn_chart = chart_state
+            self.chart.queue_draw()
 
     def _update_threshold_texts(self):
         """Restate each threshold in revs of the car currently being driven."""

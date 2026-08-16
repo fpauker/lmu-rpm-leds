@@ -59,7 +59,13 @@ update-po: pot
 
 check:
 	@for f in $(MODULES) $(TOOLS) $(DEVTOOLS); do python3 -m py_compile $$f || exit 1; done
-	@echo "All modules compile."
+	@# "for _ in ..." rebinds the gettext function to an int, and the next
+	@# translated string raises TypeError. Caught the hard way twice.
+	@users=$$(grep -ln "from i18n import" $(SOURCES) | grep -v "^i18n.py$$"); \
+	bad=$$(echo $$users | xargs grep -n "for _ in \|as _:\|^_ = " 2>/dev/null); \
+	if [ -n "$$bad" ]; then echo "gettext _ shadowed:"; echo "$$bad"; exit 1; fi
+	@msgfmt --check -o /dev/null po/de.po
+	@echo "All modules compile, translations valid, gettext intact."
 
 # Paths are substituted rather than hardcoded, so PREFIX=/usr/local produces a
 # unit and launchers that actually point at the installed files.

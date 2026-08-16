@@ -135,7 +135,7 @@ def main():
     for path, hits in found.items():
         offs = [h[0] for h in hits[:12]]
         series = {o: [] for o in offs}
-        for _ in range(6):
+        for _sample in range(6):   # not "_": that is the translation function
             data = open(path, "rb").read()
             for o in offs:
                 series[o].append(struct.unpack_from("<d", data, o)[0])
