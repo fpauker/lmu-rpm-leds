@@ -239,6 +239,9 @@ class Wheel:
         try:
             self._port = moza.MozaSerial()
             self._port.set_indicator_mode(1)
+            # The base loses its colour table when it is powered off, and a
+            # bitmask with no colours lights every segment black.
+            self._port.set_rpm_colors()
             print(_("Wheel connected: {path}").format(path=self._port.path))
             self._complained = False
             return True

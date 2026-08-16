@@ -47,6 +47,8 @@ CASES = [
     ("wheel", "rpm-indicator-mode", 1, moza.CMD_RPM_INDICATOR_MODE),
     ("wheel", "rpm-indicator-mode", 0, moza.CMD_RPM_INDICATOR_MODE),
     ("wheel", "old-send-telemetry", 0b1010101010, moza.CMD_OLD_SEND_TELEMETRY),
+    ("wheel", "telemetry-mode", 1, moza.CMD_TELEMETRY_MODE),
+    ("wheel", "telemetry-mode", 0, moza.CMD_TELEMETRY_MODE),
 ]
 
 ok = True

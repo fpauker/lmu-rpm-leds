@@ -31,9 +31,21 @@ DEV_DASH = 20
 # group, cmd_id, payload_len
 CMD_SEND_RPM_TELEMETRY = (63, [26, 0], 2)  # wheel, new protocol: LED bitmask
 CMD_OLD_SEND_TELEMETRY = (65, [253, 222], 4)  # wheel, legacy protocol
-CMD_RPM_INDICATOR_MODE = (63, [4], 1)  # 1 = driven by external telemetry
+CMD_RPM_INDICATOR_MODE = (63, [4], 1)  # legacy rims: 1 = external telemetry
+CMD_TELEMETRY_MODE = (63, [28, 0], 1)  # current rims: 1 = external telemetry
+CMD_TELEMETRY_RPM_COLORS = (63, [25, 0], 20)  # 5 LEDs per frame, 2 frames
 CMD_RPM_DISPLAY_MODE = (63, [7], 1)
 CMD_DASH_SEND_TELEMETRY = (65, [253, 222], 4)
+
+# Colour per LED, green through amber to red. Without a colour table the rim
+# happily accepts the bitmask and lights every segment black, which looks
+# exactly like a dead wheel — the base forgets the table when it is powered off.
+DEFAULT_RPM_COLORS = [
+    (0x20, 0xD8, 0x35), (0x20, 0xD8, 0x35), (0x20, 0xD8, 0x35),
+    (0x8E, 0xDE, 0x2B), (0xFF, 0xC2, 0x1A), (0xFF, 0xC2, 0x1A),
+    (0xFF, 0x5C, 0x3D), (0xFF, 0x38, 0x38), (0xFF, 0x38, 0x38),
+    (0xFF, 0x38, 0x38),
+]
 
 RPM_LEDS = 10
 
@@ -107,9 +119,39 @@ class MozaSerial:
         payload = int(value).to_bytes(nbytes, endian)
         os.write(self.fd, build(group, dev_id, cmd_id, payload))
 
+    def send_bytes(self, cmd, dev_id: int, payload: bytes):
+        """For array-typed commands, where the payload is not a number."""
+        group, cmd_id, nbytes = cmd
+        if len(payload) != nbytes:
+            raise ValueError(f"{nbytes} bytes expected, got {len(payload)}")
+        os.write(self.fd, build(group, dev_id, cmd_id, payload))
+
     def set_indicator_mode(self, mode: int):
-        """0 = wheelbase drives the LEDs itself, 1 = external telemetry."""
+        """Hand the rim's LEDs to external telemetry.
+
+        Two generations of rim disagree on how to ask. Current ones use
+        telemetry-mode; older ones only understand rpm-indicator-mode, which is
+        what boxflat files under "old". Both are sent — the rim ignores the one
+        it does not know, and getting this wrong leaves the bar dark while
+        every frame is accepted without complaint.
+        """
+        self.send(CMD_TELEMETRY_MODE, DEV_WHEEL, mode)
         self.send(CMD_RPM_INDICATOR_MODE, DEV_WHEEL, mode)
+
+    def set_rpm_colors(self, colors=None):
+        """Colour table for the rev LEDs, five per frame.
+
+        Layout per entry is (index, r, g, b); the base wants two frames of
+        twenty bytes, LEDs 0-4 then 5-9.
+        """
+        colors = list(colors or DEFAULT_RPM_COLORS)[:RPM_LEDS]
+        while len(colors) < RPM_LEDS:
+            colors.append(DEFAULT_RPM_COLORS[-1])
+        flat = bytearray()
+        for index, (r, g, b) in enumerate(colors):
+            flat.extend((index, r, g, b))
+        for half in (flat[:20], flat[20:40]):
+            self.send_bytes(CMD_TELEMETRY_RPM_COLORS, DEV_WHEEL, bytes(half))
 
     def set_leds(self, mask: int, endian: str = "little"):
         """Light LEDs by bitmask — bit 0 is the leftmost of 10.
