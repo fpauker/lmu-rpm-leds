@@ -8,15 +8,19 @@ tweaked — without touching any GTK plumbing.
 
 import math
 
-# Rev-light colouring: green through the low segments, amber, then red at the
-# shift point. Index into these by LED position.
-def led_colour(index, total):
-    frac = index / max(total - 1, 1)
-    if frac < 0.5:
-        return (0.20, 0.85, 0.35)
-    if frac < 0.8:
-        return (1.00, 0.75, 0.10)
-    return (1.00, 0.25, 0.25)
+import palette
+from i18n import pgettext
+
+def led_colour(index, total, colors=None):
+    """Colour of one segment, as Cairo floats.
+
+    Colours come from the same table the wheel is given, so the preview cannot
+    drift away from the hardware — which it used to, showing five green
+    segments where the rim lit three.
+    """
+    table = colors or palette.ramp(palette.DEFAULT_STOPS, total)
+    r, g, b = table[min(index, len(table) - 1)]
+    return (r / 255.0, g / 255.0, b / 255.0)
 
 
 def _rounded_rect(cr, x, y, w, h, r):
@@ -28,7 +32,7 @@ def _rounded_rect(cr, x, y, w, h, r):
     cr.close_path()
 
 
-def draw_bar(cr, width, height, mask, total, dark=True):
+def draw_bar(cr, width, height, mask, total, dark=True, colors=None):
     """The rev bar as the wheel shows it: lit segments left to right."""
     gap = max(3.0, width * 0.008)
     seg_w = (width - gap * (total - 1)) / total
@@ -39,7 +43,7 @@ def draw_bar(cr, width, height, mask, total, dark=True):
     for i in range(total):
         x = i * (seg_w + gap)
         lit = bool(mask >> i & 1)
-        r, g, b = led_colour(i, total)
+        r, g, b = led_colour(i, total, colors)
         _rounded_rect(cr, x, y, seg_w, seg_h, radius)
         if lit:
             cr.set_source_rgb(r, g, b)
@@ -57,7 +61,7 @@ def draw_bar(cr, width, height, mask, total, dark=True):
             cr.fill()
 
 
-def draw_curve(cr, width, height, cfg, marker=None, dark=True):
+def draw_curve(cr, width, height, cfg, marker=None, dark=True, colors=None):
     """How many LEDs are lit across the rev range, plus the thresholds.
 
     x runs from LOW to 1.02 of the limiter; y is the number of lit LEDs.
@@ -126,16 +130,19 @@ def draw_curve(cr, width, height, cfg, marker=None, dark=True):
             break
         x0, x1 = sx(max(frac_from, LOW)), sx(min(frac_to, HIGH))
         y = sy(step + 1)
-        cr.set_source_rgb(*led_colour(step, total))
+        cr.set_source_rgb(*led_colour(step, total, colors))
         cr.move_to(x0, sy(step))    # the riser
         cr.line_to(x0, y)
         cr.line_to(x1, y)           # the tread
         cr.stroke()
 
     # thresholds
-    for frac, label, rgb in ((start, "Start", (0.20, 0.85, 0.35)),
-                             (end, "Voll", (1.00, 0.75, 0.10)),
-                             (cfg["blink"], "Blinken", (1.00, 0.25, 0.25))):
+    labels = (pgettext("curve marker", "Start"),
+              pgettext("curve marker", "Full"),
+              pgettext("curve marker", "Blink"))
+    for frac, label, rgb in ((start, labels[0], (0.20, 0.85, 0.35)),
+                             (end, labels[1], (1.00, 0.75, 0.10)),
+                             (cfg["blink"], labels[2], (1.00, 0.25, 0.25))):
         if not (LOW <= frac <= HIGH):
             continue
         x = sx(frac)

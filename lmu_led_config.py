@@ -18,13 +18,14 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config  # noqa: E402
 import gearscale  # noqa: E402
 from i18n import _  # noqa: E402
 import ledview  # noqa: E402
+import palette  # noqa: E402
 import lmu_rpm_leds as daemon  # noqa: E402
 import moza  # noqa: E402
 import service  # noqa: E402
@@ -37,6 +38,15 @@ PRESETS = {
     "standard": {"start": 0.85, "end": 0.98, "blink": 0.99},
     "early": {"start": 0.75, "end": 0.96, "blink": 0.985},
     "full range": {"start": 0.40, "end": 0.97, "blink": 0.99},
+}
+
+PRESET_COLOUR_LABELS = {
+    "classic": _("Classic"),
+    "vivid": _("Vivid"),
+    "warm": _("Warm"),
+    "formula": _("Formula"),
+    "cold": _("Cold"),
+    "red": _("Red only"),
 }
 
 PRESET_LABELS = {
@@ -124,6 +134,7 @@ class Window(Adw.ApplicationWindow):
         page = Adw.PreferencesPage()
         page.add(self._group_status())
         page.add(self._group_preview())
+        page.add(self._group_colours())
         page.add(self._group_curve())
         page.add(self._group_advanced())
 
@@ -231,6 +242,62 @@ class Window(Adw.ApplicationWindow):
         group.add(sim_row)
         return group
 
+    def _group_colours(self):
+        """Colour schemes. Placed right under the preview so the big bar above
+        changes as you click, which is how you actually judge a scheme."""
+        group = Adw.PreferencesGroup(
+            title=_("Colours"),
+            description=_("pick a scheme, or set the three stops yourself"))
+
+        strip = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,
+                            homogeneous=True, max_children_per_line=3,
+                            min_children_per_line=2,
+                            row_spacing=6, column_spacing=6,
+                            margin_top=6, margin_bottom=6,
+                            margin_start=6, margin_end=6)
+        self._preset_buttons = {}
+        self._swatches = []
+        for name in palette.PRESET_ORDER:
+            button = Gtk.Button()
+            button.add_css_class("flat")
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            swatch = Gtk.DrawingArea(content_width=96, content_height=14)
+            swatch.set_draw_func(self._draw_swatch, name)
+            self._swatches.append(swatch)
+            label = Gtk.Label(label=PRESET_COLOUR_LABELS[name])
+            label.add_css_class("caption")
+            box.append(swatch)
+            box.append(label)
+            button.set_child(box)
+            button.connect("clicked", self._on_colour_preset, name)
+            strip.append(button)
+            self._preset_buttons[name] = button
+        row = Adw.PreferencesRow(activatable=False)
+        row.set_child(strip)
+        group.add(row)
+
+        self.row_custom = Adw.ExpanderRow(
+            title=_("Custom colours"),
+            subtitle=_("three stops, the rest is calculated"))
+        self._colour_buttons = []
+        for index, title in enumerate((_("Lower LEDs"), _("Middle"),
+                                       _("Shift range"))):
+            action = Adw.ActionRow(title=title)
+            picker = Gtk.ColorDialogButton(
+                dialog=Gtk.ColorDialog(with_alpha=False),
+                valign=Gtk.Align.CENTER)
+            picker.connect("notify::rgba", self._on_colour_picked, index)
+            action.add_suffix(picker)
+            self.row_custom.add_row(action)
+            self._colour_buttons.append(picker)
+        group.add(self.row_custom)
+
+        self.row_brightness = self._spin(_("Brightness"),
+                                         _("how bright the rim shines"),
+                                         10, 100, 5, suffix=" %")
+        group.add(self.row_brightness)
+        return group
+
     def _group_curve(self):
         group = Adw.PreferencesGroup(
             title=_("Curve"),
@@ -336,6 +403,18 @@ class Window(Adw.ApplicationWindow):
         self.row_legacy.set_active(self.cfg["legacy"])
         self.row_mode.set_selected(config.MODES.index(self.cfg["mode"]))
         self.row_adaptive.set_active(self.cfg["adaptive"])
+        self.row_brightness.set_value(self.cfg["brightness"])
+        active = palette.preset_of(self.cfg["colors"])
+        for name, button in self._preset_buttons.items():
+            if name == active:
+                button.add_css_class("suggested-action")
+            else:
+                button.remove_css_class("suggested-action")
+        self.row_custom.set_expanded(active is None)
+        for index, picker in enumerate(self._colour_buttons):
+            rgba = Gdk.RGBA()
+            rgba.parse(self.cfg["colors"][index])
+            picker.set_rgba(rgba)
         self._loading = False
         self._redraw()
 
@@ -352,6 +431,7 @@ class Window(Adw.ApplicationWindow):
             "legacy": self.row_legacy.get_active(),
             "mode": config.MODES[self.row_mode.get_selected()],
             "adaptive": self.row_adaptive.get_active(),
+            "brightness": self.row_brightness.get_value(),
         })
         self.cfg = config.save(self.cfg)
         self._redraw()
@@ -379,7 +459,7 @@ class Window(Adw.ApplicationWindow):
             config.pause(3.0)
             try:
                 self._sim_wheel = moza.MozaSerial()
-                self._sim_wheel.set_indicator_mode(1)
+                self._claim_wheel(self._sim_wheel)
             except OSError as exc:
                 self._sim_wheel = None
                 config.unpause()
@@ -554,6 +634,54 @@ class Window(Adw.ApplicationWindow):
 
     # ---------------------------------------------------------------- drawing
 
+    def _claim_wheel(self, wheel):
+        """Take the LEDs and hand over the current look.
+
+        Setting the mode alone is not enough: without a colour table the rim
+        lights every segment black, so a test run before the daemon had ever
+        connected looked like dead hardware.
+        """
+        wheel.set_indicator_mode(1)
+        wheel.set_rpm_colors(self._colors())
+        wheel.set_rpm_brightness(self.cfg["brightness"])
+
+    def _colors(self):
+        """The LED colour table currently configured."""
+        return palette.ramp(self.cfg["colors"], self.cfg["leds"])
+
+    def _draw_swatch(self, _area, cr, width, height, name):
+        """A fully lit miniature bar, so schemes are chosen by look."""
+        leds = self.cfg["leds"]
+        ledview.draw_bar(cr, width, height, (1 << leds) - 1, leds,
+                         self._dark(), palette.ramp(palette.PRESETS[name], leds))
+
+    def _on_colour_preset(self, _button, name):
+        self.cfg["colors"] = list(palette.PRESETS[name])
+        self.cfg = config.save(self.cfg)
+        self._load_into_widgets()
+        self._refresh_swatches()
+        self._toast(_("Colour scheme “{name}” applied").format(
+            name=PRESET_COLOUR_LABELS[name]))
+
+    def _on_colour_picked(self, picker, _param, index):
+        if self._loading:
+            return
+        rgba = picker.get_rgba()
+        chosen = palette.to_hex((round(rgba.red * 255), round(rgba.green * 255),
+                                 round(rgba.blue * 255)))
+        if chosen == self.cfg["colors"][index]:
+            return
+        colors = list(self.cfg["colors"])
+        colors[index] = chosen
+        self.cfg["colors"] = colors
+        self.cfg = config.save(self.cfg)
+        self._load_into_widgets()
+        self._refresh_swatches()
+
+    def _refresh_swatches(self):
+        for area in getattr(self, "_swatches", ()):
+            area.queue_draw()
+
     def _redraw(self):
         """Force both areas to repaint, after a settings change."""
         self._drawn_bar = self._drawn_chart = None
@@ -569,7 +697,8 @@ class Window(Adw.ApplicationWindow):
         whether or not anything had moved.
         """
         cfg = self.cfg
-        bar_state = (self._preview_mask, cfg["leds"])
+        appearance = (tuple(cfg["colors"]), cfg["brightness"])
+        bar_state = (self._preview_mask, cfg["leds"], appearance)
         if bar_state != self._drawn_bar:
             self._drawn_bar = bar_state
             self.bar.queue_draw()
@@ -578,7 +707,8 @@ class Window(Adw.ApplicationWindow):
         # pixel, so a slowly climbing needle does not force a full repaint per
         # tick.
         marker = None if self._live_frac is None else round(self._live_frac, 3)
-        chart_state = (cfg["start"], cfg["end"], cfg["blink"], cfg["leds"], marker)
+        chart_state = (cfg["start"], cfg["end"], cfg["blink"], cfg["leds"],
+                       marker, appearance)
         if chart_state != self._drawn_chart:
             self._drawn_chart = chart_state
             self.chart.queue_draw()
@@ -601,11 +731,12 @@ class Window(Adw.ApplicationWindow):
 
     def _draw_bar(self, _area, cr, width, height):
         ledview.draw_bar(cr, width, height, self._preview_mask,
-                         self.cfg["leds"], self._dark())
+                         self.cfg["leds"], self._dark(),
+                         palette.dim(self._colors(), self.cfg["brightness"]))
 
     def _draw_chart(self, _area, cr, width, height):
         ledview.draw_curve(cr, width, height, self.cfg,
-                           self._live_frac, self._dark())
+                           self._live_frac, self._dark(), self._colors())
 
     # ------------------------------------------------------------------ misc
 
@@ -626,7 +757,7 @@ class Window(Adw.ApplicationWindow):
         config.pause(4.0)
         try:
             wheel = moza.MozaSerial()
-            wheel.set_indicator_mode(1)
+            self._claim_wheel(wheel)
         except OSError as exc:
             config.unpause()
             self._toast(f"Lenkrad nicht erreichbar: {exc}")

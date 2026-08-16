@@ -20,6 +20,7 @@ import glob
 import os
 import termios
 
+import palette
 from i18n import _
 
 MSG_START = 0x7E
@@ -34,20 +35,17 @@ CMD_OLD_SEND_TELEMETRY = (65, [253, 222], 4)  # wheel, legacy protocol
 CMD_RPM_INDICATOR_MODE = (63, [4], 1)  # legacy rims: 1 = external telemetry
 CMD_TELEMETRY_MODE = (63, [28, 0], 1)  # current rims: 1 = external telemetry
 CMD_TELEMETRY_RPM_COLORS = (63, [25, 0], 20)  # 5 LEDs per frame, 2 frames
+CMD_RPM_BRIGHTNESS = (63, [27, 0, 255], 1)     # current rims, percent
+CMD_OLD_RPM_BRIGHTNESS = (63, [20, 0], 1)      # legacy rims
 CMD_RPM_DISPLAY_MODE = (63, [7], 1)
 CMD_DASH_SEND_TELEMETRY = (65, [253, 222], 4)
 
-# Colour per LED, green through amber to red. Without a colour table the rim
-# happily accepts the bitmask and lights every segment black, which looks
-# exactly like a dead wheel — the base forgets the table when it is powered off.
-DEFAULT_RPM_COLORS = [
-    (0x20, 0xD8, 0x35), (0x20, 0xD8, 0x35), (0x20, 0xD8, 0x35),
-    (0x8E, 0xDE, 0x2B), (0xFF, 0xC2, 0x1A), (0xFF, 0xC2, 0x1A),
-    (0xFF, 0x5C, 0x3D), (0xFF, 0x38, 0x38), (0xFF, 0x38, 0x38),
-    (0xFF, 0x38, 0x38),
-]
-
 RPM_LEDS = 10
+
+# Without a colour table the rim happily accepts the bitmask and lights every
+# segment black, which looks exactly like a dead wheel — and the base forgets
+# the table when it is powered off.
+DEFAULT_RPM_COLORS = palette.ramp(palette.DEFAULT_STOPS, RPM_LEDS)
 
 
 def build(group: int, dev_id: int, cmd_id: list[int], payload: bytes) -> bytes:
@@ -148,14 +146,22 @@ class MozaSerial:
         Layout per entry is (index, r, g, b); the base wants two frames of
         twenty bytes, LEDs 0-4 then 5-9.
         """
-        colors = list(colors or DEFAULT_RPM_COLORS)[:RPM_LEDS]
+        colors = [palette.parse(c) for c in (colors or DEFAULT_RPM_COLORS)][:RPM_LEDS]
         while len(colors) < RPM_LEDS:
-            colors.append(DEFAULT_RPM_COLORS[-1])
+            # Repeat the caller's own top colour, not ours: padding a short
+            # ramp with a foreign red would put stray colours on LEDs the rim
+            # may well light.
+            colors.append(colors[-1] if colors else DEFAULT_RPM_COLORS[-1])
         flat = bytearray()
         for index, (r, g, b) in enumerate(colors):
             flat.extend((index, r, g, b))
         for half in (flat[:20], flat[20:40]):
             self.send_bytes(CMD_TELEMETRY_RPM_COLORS, DEV_WHEEL, bytes(half))
+
+    def set_rpm_brightness(self, percent: int, legacy: bool = False):
+        """Rim brightness in percent. Same two-generation split as the mode."""
+        cmd = CMD_OLD_RPM_BRIGHTNESS if legacy else CMD_RPM_BRIGHTNESS
+        self.send(cmd, DEV_WHEEL, max(0, min(100, int(percent))))
 
     def set_leds(self, mask: int, endian: str = "little"):
         """Light LEDs by bitmask — bit 0 is the leftmost of 10.

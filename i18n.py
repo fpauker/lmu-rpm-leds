@@ -30,3 +30,8 @@ _translation = gettext.translation(DOMAIN, localedir=_localedir(), fallback=True
 # The conventional short name. Import as: from i18n import _
 _ = _translation.gettext
 ngettext = _translation.ngettext
+
+# For words that mean different things in different places. "Start" is a button
+# in one spot and an axis label in another, and one catalogue entry cannot serve
+# both — the button reads "Starten" in German, the label must not.
+pgettext = _translation.pgettext

@@ -93,6 +93,8 @@ where each threshold sits.
 | `rate` | telemetry polls per second | 50.0 |
 | `leds` | LEDs in the rim | 10 |
 | `mode` | `bar` fills left to right, `center` from both ends inward | `bar` |
+| `colors` | three stops — low, middle, shift point — as `#rrggbb` | green/amber/red |
+| `brightness` | rim brightness in percent | 100 |
 | `adaptive` | scale the curve to what each gear actually revs to | true |
 | `legacy` | use the older telemetry command id | false |
 | `enabled` | feed the LEDs at all | true |
@@ -107,6 +109,25 @@ revs a long way and the bar clears on its own. In the tall gears on a long
 straight it may only fall from 8250 to 7800 rpm — 94.5 % — so an `end` of 0.93
 leaves the bar stuck at full. The app spells each threshold out in RPM of the
 car you are driving, which makes that easy to see.
+
+### Colours
+
+Six schemes are offered in the app, chosen by looking at a miniature of the lit
+bar rather than by name: classic, vivid, warm, formula, cold and red only. Each
+is three stops — low, middle, shift point — and the table for however many LEDs
+the rim has is generated from them, so a rim with eight or sixteen segments gets
+a sensible ramp without anyone editing ten values.
+
+Two details that matter on real LEDs rather than on screen. The ramp is stepped,
+not smooth: ten evenly interpolated colours differ by about a tenth of the range
+each and read as a smear, so they are grouped into an odd number of blocks that
+stay clearly apart. And mixing two far-apart hues in plain RGB collapses through
+a dark middle — green to red passes through olive, which looks like a broken
+segment — so each mixed colour is rescaled to the brightness its neighbours
+call for.
+
+Brightness is a separate setting; the preview dims with it, so the screen keeps
+matching the wheel.
 
 ### Adapting to the gear
 

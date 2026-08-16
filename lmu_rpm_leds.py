@@ -40,6 +40,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config
 import gearscale
 import moza
+import palette
 from i18n import _
 
 STRIDE = 1888  # sizeof(TelemInfoV01), pack(4)
@@ -233,6 +234,7 @@ class Wheel:
         self._next_try = 0.0
         self._next_assert = 0.0
         self._complained = False
+        self._appearance = None    # (colours, brightness) the rim should show
 
     def _ensure(self):
         if self._port is not None:
@@ -254,11 +256,28 @@ class Wheel:
                 self._complained = True
             return False
 
+    def set_appearance(self, colors, brightness):
+        """Colours and brightness the rim should show.
+
+        A change takes effect on the next frame rather than waiting out the
+        re-assert interval, so editing a colour in the app is visible at once
+        instead of up to five seconds later.
+        """
+        wanted = (tuple(tuple(c) for c in colors), int(brightness))
+        if wanted != self._appearance:
+            self._appearance = wanted
+            self._next_assert = 0.0
+
     def _assert_mode(self):
-        """Claim the LEDs and restate the colour table."""
+        """Claim the LEDs, restate the colour table and the brightness."""
         self._port.set_indicator_mode(1)
-        # A bitmask with no colour table lights every segment black.
-        self._port.set_rpm_colors()
+        if self._appearance:
+            colors, brightness = self._appearance
+            # A bitmask with no colour table lights every segment black.
+            self._port.set_rpm_colors(colors)
+            self._port.set_rpm_brightness(brightness)
+        else:
+            self._port.set_rpm_colors()
         self._next_assert = time.monotonic() + self.REASSERT
 
     def send(self, mask, legacy=False):
@@ -361,6 +380,12 @@ def main():
 
     wheel = Wheel()
 
+    def apply_appearance():
+        wheel.set_appearance(palette.ramp(cfg["colors"], cfg["leds"]),
+                             cfg["brightness"])
+
+    apply_appearance()
+
     def send(mask):
         """Returns the mask to remember: None when the frame did not go out,
         so the next pass resends it once the wheel is back."""
@@ -387,6 +412,7 @@ def main():
                 last_cfg_poll = now
                 if watcher.poll():
                     cfg = dict(watcher.config, **overrides)
+                    apply_appearance()
                     last_mask = None  # force a resend under the new curve
                     print(_("\nCurve reloaded: start={start:.2f} end={end:.2f} "
                             "blink={blink:.2f}").format(

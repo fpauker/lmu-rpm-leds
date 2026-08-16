@@ -12,6 +12,8 @@ half-written file — the daemon reads this at 50 Hz.
 import json
 import os
 
+import palette
+
 APP_NAME = "lmu-rpm-leds"
 
 DEFAULTS = {
@@ -23,6 +25,8 @@ DEFAULTS = {
     "leds": 10,         # LEDs on the rim
     "mode": "bar",      # "bar" fills left to right, "center" from both ends
     "adaptive": True,   # scale the curve to what each gear actually revs to
+    "colors": list(palette.DEFAULT_STOPS),   # three stops: low, middle, shift
+    "brightness": 100,  # percent
     "legacy": False,    # use the old telemetry command id
     "enabled": True,    # feed the LEDs at all
 }
@@ -38,6 +42,7 @@ LIMITS = {
     "blink_hz": (1.0, 30.0),
     "rate": (5.0, 200.0),
     "leds": (1, 16),
+    "brightness": (10, 100),
 }
 
 
@@ -55,7 +60,9 @@ def sanitise(raw):
     cfg = dict(DEFAULTS)
     if isinstance(raw, dict):
         for key, default in DEFAULTS.items():
-            if key not in raw:
+            # "colors" is a list; the coercion below would turn a hex string
+            # into a list of its characters. It gets its own validator.
+            if key not in raw or key == "colors":
                 continue
             value = raw[key]
             try:
@@ -69,6 +76,12 @@ def sanitise(raw):
 
     if cfg["mode"] not in MODES:
         cfg["mode"] = DEFAULTS["mode"]
+
+    # Outside the block above on purpose, so a missing or unreadable file still
+    # comes back with three usable stops — and with a list of its own, since
+    # dict(DEFAULTS) copies shallowly and a shared list would let one caller's
+    # edit leak into every other.
+    cfg["colors"] = palette.stops(raw.get("colors") if isinstance(raw, dict) else None)
 
     # The curve must stay monotonic or the bar maths break down.
     if cfg["end"] <= cfg["start"]:
@@ -84,7 +97,7 @@ def load():
         with open(config_path(), "r") as f:
             return sanitise(json.load(f))
     except (OSError, ValueError):
-        return dict(DEFAULTS)
+        return sanitise(None)
 
 
 def save(cfg):
