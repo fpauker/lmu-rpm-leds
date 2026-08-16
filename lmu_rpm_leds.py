@@ -223,10 +223,15 @@ class Wheel:
     """
 
     RETRY = 3.0
+    # The base forgets mode and colours when it is powered off, and other tools
+    # writing to the same port can take the LEDs back. Re-asserting costs four
+    # short frames and saves a service restart.
+    REASSERT = 5.0
 
     def __init__(self):
         self._port = None
         self._next_try = 0.0
+        self._next_assert = 0.0
         self._complained = False
 
     def _ensure(self):
@@ -238,10 +243,7 @@ class Wheel:
         self._next_try = now + self.RETRY
         try:
             self._port = moza.MozaSerial()
-            self._port.set_indicator_mode(1)
-            # The base loses its colour table when it is powered off, and a
-            # bitmask with no colours lights every segment black.
-            self._port.set_rpm_colors()
+            self._assert_mode()
             print(_("Wheel connected: {path}").format(path=self._port.path))
             self._complained = False
             return True
@@ -252,11 +254,20 @@ class Wheel:
                 self._complained = True
             return False
 
+    def _assert_mode(self):
+        """Claim the LEDs and restate the colour table."""
+        self._port.set_indicator_mode(1)
+        # A bitmask with no colour table lights every segment black.
+        self._port.set_rpm_colors()
+        self._next_assert = time.monotonic() + self.REASSERT
+
     def send(self, mask, legacy=False):
         """True if the frame went out."""
         if not self._ensure():
             return False
         try:
+            if time.monotonic() >= self._next_assert:
+                self._assert_mode()
             if legacy:
                 self._port.set_leds_legacy(mask)
             else:

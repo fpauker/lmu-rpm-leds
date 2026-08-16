@@ -131,12 +131,16 @@ class MozaSerial:
 
         Two generations of rim disagree on how to ask. Current ones use
         telemetry-mode; older ones only understand rpm-indicator-mode, which is
-        what boxflat files under "old". Both are sent — the rim ignores the one
-        it does not know, and getting this wrong leaves the bar dark while
-        every frame is accepted without complaint.
+        what boxflat files under "old".
+
+        Order matters: the legacy command goes first, the current one last. The
+        other way round the bar stayed dark until boxflat's own rev-light test
+        was pressed — that test sets only telemetry-mode, and sending the
+        legacy command after it evidently put the rim back under the base's own
+        control.
         """
-        self.send(CMD_TELEMETRY_MODE, DEV_WHEEL, mode)
         self.send(CMD_RPM_INDICATOR_MODE, DEV_WHEEL, mode)
+        self.send(CMD_TELEMETRY_MODE, DEV_WHEEL, mode)
 
     def set_rpm_colors(self, colors=None):
         """Colour table for the rev LEDs, five per frame.
