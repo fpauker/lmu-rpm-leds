@@ -39,6 +39,8 @@ class ServiceController(GObject.Object):
         self.unit_name = unit_name
         self._last = None          # last reported state, to swallow duplicates
         self._unit = None
+        self._attaching = False
+        self._file_state = None    # invalidated by UnitFilesChanged
 
         self._bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
         self._mgr = Gio.DBusProxy.new_sync(
@@ -59,7 +61,26 @@ class ServiceController(GObject.Object):
     # ---------- unit proxy ----------
 
     def _attach_unit(self):
-        """LoadUnit rather than GetUnit: loads the unit if it is not loaded."""
+        """LoadUnit rather than GetUnit: loads the unit if it is not loaded.
+
+        Guarded against re-entry. LoadUnit makes systemd load the unit, and
+        loading it makes systemd broadcast UnitNew — for an inactive unit,
+        which systemd unloads again straight away, that is a feedback loop:
+        every attach triggers the signal that triggers the next attach. Each
+        turn costs several synchronous D-Bus round trips inside a signal
+        handler, which starved the GTK main loop so thoroughly that the window
+        never got a size and stayed invisible.
+        """
+        if self._attaching:
+            return
+        self._attaching = True
+        try:
+            self._load_unit()
+        finally:
+            self._attaching = False
+        self._file_state = None    # a fresh proxy means a fresh reading
+
+    def _load_unit(self):
         try:
             path = self._mgr.call_sync(
                 "LoadUnit", GLib.Variant("(s)", (self.unit_name,)),
@@ -104,8 +125,15 @@ class ServiceController(GObject.Object):
 
     @property
     def unit_file_state(self):
-        # NO emits-change on this one, so always read it fresh
-        return self._prop(UNIT_IFACE, "UnitFileState", "unknown")
+        """NO emits-change on this one, so it has to be read explicitly.
+
+        Cached between UnitFilesChanged signals: it used to be fetched
+        synchronously on every state change, which put a blocking round trip
+        into every signal handler.
+        """
+        if self._file_state is None:
+            self._file_state = self._prop(UNIT_IFACE, "UnitFileState", "unknown")
+        return self._file_state
 
     @property
     def is_enabled(self):
@@ -169,11 +197,20 @@ class ServiceController(GObject.Object):
                 self.emit("job-done", result)
         elif signal == "UnitFilesChanged":
             # Enable/Disable does NOT announce itself via PropertiesChanged
+            self._file_state = None
             self._emit_state()
-        elif signal in ("UnitNew", "UnitRemoved"):
-            name = params.unpack()[0]
-            if name == self.unit_name:
-                self._attach_unit()
+        # UnitNew and UnitRemoved are deliberately ignored. systemd unloads an
+        # inactive unit as soon as nothing references it and loads it again on
+        # the next query, so for a stopped service those two signals arrive in
+        # a steady stream. Re-attaching on them called LoadUnit, which made
+        # systemd emit UnitNew, which re-attached again — a feedback loop of
+        # synchronous D-Bus round trips inside a signal handler that starved
+        # the GTK main loop until the window never even got a size.
+        #
+        # The proxy does not need re-attaching: the unit's object path is
+        # derived from its name and stays valid across unload and reload, and
+        # every state change we care about arrives as PropertiesChanged,
+        # JobRemoved or UnitFilesChanged.
 
 
 class JournalTail(GObject.Object):
