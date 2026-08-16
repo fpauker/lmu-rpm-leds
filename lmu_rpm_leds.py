@@ -224,10 +224,12 @@ class Wheel:
     """
 
     RETRY = 3.0
-    # The base forgets mode and colours when it is powered off, and other tools
-    # writing to the same port can take the LEDs back. Re-asserting costs four
-    # short frames and saves a service restart.
-    REASSERT = 5.0
+    # The base forgets mode and colours when it is powered off, and boxflat --
+    # which writes to the same port -- re-applies its own colour table from
+    # time to time. Five frames of about 27 bytes each on a 115200 baud link is
+    # nothing, and it keeps the configured look from being overwritten for
+    # seconds at a stretch while driving.
+    REASSERT = 2.0
 
     def __init__(self):
         self._port = None

@@ -488,11 +488,23 @@ class Window(Adw.ApplicationWindow):
             self.banner.set_revealed(False)
 
     def _renew_pause(self):
-        """Keep the lease alive while we hold the port."""
+        """Keep the lease alive, and keep the look on the rim.
+
+        boxflat writes to the same port and re-applies its own colour table
+        from time to time. The daemon deals with that by re-asserting every few
+        seconds, but during simulation the daemon is parked and the app was
+        claiming the wheel only once — so boxflat's colours won, and the rim
+        disagreed with the preview.
+        """
         if not self.row_sim.get_active() and not self._testing:
             self._renew = None
             return False
         config.pause(3.0)
+        if self._sim_wheel:
+            try:
+                self._claim_wheel(self._sim_wheel)
+            except OSError:
+                self._release_sim()
         return True
 
     def _release_sim(self):
