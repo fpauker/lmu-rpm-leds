@@ -40,14 +40,20 @@ class GearScale:
         self._peak = {}      # gear -> highest RPM seen
         self._time = {}      # gear -> seconds spent in it
         self._maxrpm = None
+        self._max_gears = None
+        self._top_seen = 0   # highest gear actually driven, sanity for the above
         self._last_sample = None
 
-    def observe(self, rpm, maxrpm, gear, now):
+    def observe(self, rpm, maxrpm, gear, now, max_gears=None):
         """Feed one telemetry sample. Returns the reference RPM to use."""
         # A car change resets everything; the old gearing tells us nothing.
         if self._maxrpm is not None and maxrpm != self._maxrpm:
             self.reset()
         self._maxrpm = maxrpm
+        if max_gears is not None:
+            self._max_gears = max_gears
+        if gear > self._top_seen:
+            self._top_seen = gear
 
         # Gear 0 shows up for a few tens of milliseconds during every upshift,
         # and while parked. Neither says anything about a gear's range.
@@ -65,7 +71,22 @@ class GearScale:
         return self.reference(gear, maxrpm)
 
     def reference(self, gear, maxrpm):
-        """What to treat as the top of the band in this gear."""
+        """What to treat as the top of the band in this gear.
+
+        The top gear is never scaled. It is speed-limited, not rev-limited:
+        entry revs already sit close to whatever peak the gear will ever see,
+        so a scaled bar jumps to full the moment the gear engages and then
+        blinks at an engine nowhere near its limiter — and there is no higher
+        gear a shift indicator could be pointing at anyway. Absolute revs
+        against the limiter are the honest display there.
+        """
+        # Trust the claimed gear count only while it is consistent with what
+        # has actually been driven: the offset it is read from is derived from
+        # the SDK header, and a misread byte (say, a tyre compound index of 2)
+        # must not silently declare third gear "top" and switch scaling off.
+        claimed = self._max_gears
+        if claimed is not None and claimed >= self._top_seen and gear >= claimed:
+            return maxrpm
         if gear < 1 or self._time.get(gear, 0.0) < SETTLE_SECONDS:
             return maxrpm
         peak = self._peak.get(gear, 0.0)
@@ -79,7 +100,10 @@ class GearScale:
                 "peak": round(self._peak.get(gear, 0.0)),
                 "seconds": round(self._time.get(gear, 0.0), 1),
                 "reference": round(self.reference(gear, maxrpm)),
-                "learned": self._time.get(gear, 0.0) >= SETTLE_SECONDS,
+                "learned": (self._time.get(gear, 0.0) >= SETTLE_SECONDS
+                            and not (self._max_gears is not None
+                                     and self._max_gears >= self._top_seen
+                                     and gear >= self._max_gears)),
             }
             for gear in sorted(self._time)
         }

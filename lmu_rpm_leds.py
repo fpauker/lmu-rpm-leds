@@ -49,6 +49,9 @@ OFF_GEAR = 352
 OFF_RPM = 356
 OFF_MAXRPM = 532
 OFF_THROTTLE = 388
+# mMaxGears, u8. Derived from the pack(4) layout of the SDK header:
+# ...mEngineTorque@592, mCurrentSector@600 (int32), mSpeedLimiter@604, then this.
+OFF_MAXGEARS = 605
 OFF_NAME = 32
 HDR_LEN = 4  # activeVehicles, playerVehicleIdx, playerHasVehicle, pad
 
@@ -180,6 +183,8 @@ class Telemetry:
         # Session clock of the last sample, used to tell a frozen buffer from a
         # car that is simply standing still.
         self.elapsed = None
+        # Forward gear count of the car, or None until it reads plausibly.
+        self.max_gears = None
 
     def alive(self):
         """Our fd keeps the memfd alive after the game exits, so reads would
@@ -199,6 +204,10 @@ class Telemetry:
         if len(buf) < OFF_MAXRPM + 8:
             return None
         self.elapsed = struct.unpack_from("<d", buf, OFF_ELAPSED)[0]
+        # Guarded: the offset is computed from the SDK header, not yet seen on
+        # every car, and a garbage byte must not change behaviour.
+        gears = buf[OFF_MAXGEARS]
+        self.max_gears = gears if 2 <= gears <= 10 else None
         gear = struct.unpack_from("<i", buf, OFF_GEAR)[0]
         rpm = struct.unpack_from("<d", buf, OFF_RPM)[0]
         mx = struct.unpack_from("<d", buf, OFF_MAXRPM)[0]
@@ -488,7 +497,8 @@ def main():
                 # gear has shown its range the limiter is used, which is the
                 # unadapted behaviour.
                 if cfg["adaptive"]:
-                    reference = scale.observe(rpm, mx, gear, now)
+                    reference = scale.observe(rpm, mx, gear, now,
+                                              tele.max_gears)
                     if now - last_publish > 2.0:
                         last_publish = now
                         gearscale.publish(scale.table(mx), mx)

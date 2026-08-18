@@ -149,6 +149,14 @@ fourth. A gear needs about three seconds of driving before its reference is
 trusted; until then the limiter is used, so the display is never worse than it
 was.
 
+The top gear is exempt and always shows absolute revs against the limiter. It
+is speed-limited, not rev-limited: entry revs already sit close to whatever
+peak the gear will ever see, so a scaled bar would jump to full the moment the
+gear engages and blink at an engine nowhere near its limiter — and there is no
+higher gear a shift indicator could point at. The gear count comes from the
+telemetry and is cross-checked against the gears actually driven before it is
+trusted.
+
 Nothing is remembered between sessions. Changing the gearing in the setup would
 make yesterday's numbers wrong, and one lap of relearning costs less than a
 stale reference.
