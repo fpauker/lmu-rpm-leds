@@ -123,6 +123,11 @@ class MozaSerial:
         # profile means reopening.
         self.profile = resolve_profile(profile, self.path)
         self.dev_id = DEV_BASE if self.profile == "legacy" else DEV_WHEEL
+        # What a legacy rim was last given — its colours and brightness go to
+        # non-volatile storage, so identical values must not be rewritten on
+        # every re-assert (the daemon re-asserts every 2 s; that would wear
+        # the rim's flash out in weeks).
+        self._written = {}
         self.fd = os.open(self.path, os.O_RDWR | os.O_NOCTTY)
         self._configure()
 
@@ -188,9 +193,14 @@ class MozaSerial:
             # may well light.
             colors.append(colors[-1] if colors else DEFAULT_RPM_COLORS[-1])
         if self.profile == "legacy":
-            for index, rgb in enumerate(colors):
-                cmd = (63, CMD_OLD_RPM_COLOR_BASE_ID + [index], 3)
-                self.send_bytes(cmd, self.dev_id, bytes(rgb))
+            # Persistent storage: skip when nothing changed. Re-asserting
+            # against boxflat is a volatile-table problem the legacy rim
+            # does not have.
+            if self._written.get("colors") != colors:
+                for index, rgb in enumerate(colors):
+                    cmd = (63, CMD_OLD_RPM_COLOR_BASE_ID + [index], 3)
+                    self.send_bytes(cmd, self.dev_id, bytes(rgb))
+                self._written["colors"] = colors
             return
         flat = bytearray()
         for index, (r, g, b) in enumerate(colors):
@@ -200,9 +210,15 @@ class MozaSerial:
 
     def set_rpm_brightness(self, percent: int):
         """Rim brightness in percent. Same two-generation split as the mode."""
-        cmd = (CMD_OLD_RPM_BRIGHTNESS if self.profile == "legacy"
-               else CMD_RPM_BRIGHTNESS)
-        self.send(cmd, self.dev_id, max(0, min(100, int(percent))))
+        percent = max(0, min(100, int(percent)))
+        if self.profile == "legacy":
+            # Stored persistently, like the colours — write only on change.
+            if self._written.get("brightness") == percent:
+                return
+            self._written["brightness"] = percent
+            self.send(CMD_OLD_RPM_BRIGHTNESS, self.dev_id, percent)
+            return
+        self.send(CMD_RPM_BRIGHTNESS, self.dev_id, percent)
 
     def set_leds(self, mask: int):
         """Light LEDs by bitmask — bit 0 is the leftmost of 10.
