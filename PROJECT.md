@@ -87,10 +87,11 @@ Quellordner:
 
 ## Offen
 
-1. **Issue #1 „LED not working"** (Moza R5 Pro + ES-Lenkrad) — Mechanismus
-   live reproduziert, ES-Frage offen; Stand und nächste Schritte in
-   [docs/issue-1-untersuchung.md](docs/issue-1-untersuchung.md). Antworten auf
-   GitHub auf Englisch, nur nach Freigabe des Besitzers posten.
+1. **Issue #1 „LED not working"** (Moza R5 Pro + ES-Lenkrad) — Fix gepusht,
+   Antwort mit Testprotokoll am 2026-10-02 gepostet (nach Freigabe), Issue
+   als erledigt geschlossen (Wiederöffnen angeboten). Wartet nur noch auf
+   die Hardware-Rückmeldung des Melders; Details in
+   [docs/issue-1-untersuchung.md](docs/issue-1-untersuchung.md).
 2. ~~Fix dazu: Farbtabelle in den Diagnose-Tools~~ seit 2026-10-02 umgesetzt,
    zusammen mit dem Profil-Wahlschalter (Kennung 19 ↔ 23). Offen bleibt die
    Hardware-Bestätigung des Legacy-Pfads durch den Issue-#1-Melder —

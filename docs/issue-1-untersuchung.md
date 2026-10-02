@@ -69,7 +69,13 @@ bevor er weitertestet.
 
 ## Nächste Schritte
 
-- [ ] Rückfragen an den Melder (englisch, nach Freigabe), in dieser Reihenfolge:
+- [x] Antwort gepostet (2026-10-02, nach Freigabe):
+      <https://github.com/fpauker/lmu-rpm-leds/issues/1#issuecomment-5960117697>
+      — Diagnose, Power-Cycle-Warnung, Testprotokoll (`git pull`, dann
+      `python3 led_test.py`, erwartet „profile: legacy"), Rückfragen als
+      Entscheidungsbaum. Issue als erledigt geschlossen, Wiederöffnen
+      ausdrücklich angeboten.
+- [x] Rückfragen an den Melder (in der Antwort enthalten), in dieser Reihenfolge:
       1. **Base aus-/einschalten** (Queue-Warnung!), dann: boxflat öffnen —
          siehst du „Wheel" oder „Wheel (old)"? RPM-Testknopf drücken: leuchten
          die LEDs? (trennt Hardware-Defekt von Software UND verrät die
