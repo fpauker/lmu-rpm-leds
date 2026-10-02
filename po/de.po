@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lmu-rpm-leds 1.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/fpauker/lmu-rpm-leds/issues\n"
-"POT-Creation-Date: 2026-08-16 20:38+0200\n"
+"POT-Creation-Date: 2026-10-02 21:19+0200\n"
 "PO-Revision-Date: 2026-08-15 23:06+0200\n"
 "Last-Translator: Florian Pauker\n"
 "Language-Team: German\n"
@@ -17,51 +17,51 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lmu_rpm_leds.py:249
+#: lmu_rpm_leds.py:273
 #, python-brace-format
-msgid "Wheel connected: {path}"
-msgstr "Lenkrad verbunden: {path}"
+msgid "Wheel connected: {path} (profile: {profile})"
+msgstr "Lenkrad verbunden: {path} (Profil: {profile})"
 
-#: lmu_rpm_leds.py:254
+#: lmu_rpm_leds.py:279
 #, python-brace-format
 msgid "Wheel not reachable ({error}) — will keep trying."
 msgstr "Lenkrad nicht erreichbar ({error}) — versuche es weiter."
 
-#: lmu_rpm_leds.py:296
+#: lmu_rpm_leds.py:318
 #, python-brace-format
 msgid "Wheel lost ({error}) — reconnecting."
 msgstr "Lenkrad verloren ({error}) — verbinde neu."
 
-#: lmu_rpm_leds.py:357
+#: lmu_rpm_leds.py:379
 msgid "fraction of maximum RPM where the first LED lights"
 msgstr "Anteil der Maximaldrehzahl, ab dem die erste LED leuchtet"
 
-#: lmu_rpm_leds.py:359
+#: lmu_rpm_leds.py:381
 msgid "fraction where the whole bar is lit"
 msgstr "Anteil, ab dem alle LEDs leuchten"
 
-#: lmu_rpm_leds.py:361
+#: lmu_rpm_leds.py:383
 msgid "fraction where the bar starts flashing (shift point)"
 msgstr "Anteil, ab dem der Balken blinkt (Schaltpunkt)"
 
-#: lmu_rpm_leds.py:362
+#: lmu_rpm_leds.py:384
 msgid "updates per second"
 msgstr "Updates pro Sekunde"
 
-#: lmu_rpm_leds.py:364
-msgid "use the legacy telemetry command (id 253/222)"
-msgstr "altes Telemetriekommando verwenden (id 253/222)"
+#: lmu_rpm_leds.py:386
+msgid "wheel generation: modern (R9 class), legacy (R3/R5 class), or auto"
+msgstr "Lenkrad-Generation: modern (R9-Klasse), legacy (R3/R5-Klasse) oder auto"
 
-#: lmu_rpm_leds.py:404
+#: lmu_rpm_leds.py:427
 msgid "Running. Ctrl+C to stop."
 msgstr "Läuft. Strg+C zum Beenden."
 
-#: lmu_rpm_leds.py:405
+#: lmu_rpm_leds.py:428
 #, python-brace-format
 msgid "Configuration: {path}"
 msgstr "Konfiguration: {path}"
 
-#: lmu_rpm_leds.py:417
+#: lmu_rpm_leds.py:441
 #, python-brace-format
 msgid ""
 "\n"
@@ -70,12 +70,12 @@ msgstr ""
 "\n"
 "Kennlinie neu geladen: start={start:.2f} end={end:.2f} blink={blink:.2f}"
 
-#: lmu_rpm_leds.py:447
+#: lmu_rpm_leds.py:471
 #, python-brace-format
 msgid "Telemetry found: {path} @ {offset}"
 msgstr "Telemetrie gefunden: {path} @ {offset}"
 
-#: lmu_rpm_leds.py:451
+#: lmu_rpm_leds.py:475
 msgid ""
 "\n"
 "LMU has quit — waiting for the next start."
@@ -83,7 +83,7 @@ msgstr ""
 "\n"
 "LMU beendet — warte auf den nächsten Start."
 
-#: lmu_rpm_leds.py:463
+#: lmu_rpm_leds.py:487
 msgid ""
 "\n"
 "Telemetry frozen — searching for the source again."
@@ -91,7 +91,7 @@ msgstr ""
 "\n"
 "Telemetrie eingefroren — suche die Quelle neu."
 
-#: lmu_rpm_leds.py:524
+#: lmu_rpm_leds.py:549
 msgid ""
 "\n"
 "Stopping ..."
@@ -143,8 +143,8 @@ msgstr "Ganzer Bereich"
 msgid "MOZA RPM LEDs"
 msgstr "MOZA RPM-LEDs"
 
-#: lmu_led_config.py:131 lmu_led_config.py:150 lmu_led_config.py:487
-#: lmu_led_config.py:534
+#: lmu_led_config.py:131 lmu_led_config.py:150 lmu_led_config.py:516
+#: lmu_led_config.py:575
 msgid "Show journal"
 msgstr "Journal zeigen"
 
@@ -324,62 +324,74 @@ msgstr "LEDs im Kranz"
 msgid "number of segments"
 msgstr "Anzahl der Segmente"
 
-#: lmu_led_config.py:371
-msgid "Legacy telemetry command"
-msgstr "Altes Telemetriekommando"
-
 #: lmu_led_config.py:372
-msgid "only needed if the bar stays dark"
-msgstr "nur nötig, wenn der Balken dunkel bleibt"
+msgid "Wheelbase generation"
+msgstr "Wheelbase-Generation"
+
+#: lmu_led_config.py:373
+msgid "sets the device id and command set the rim listens on"
+msgstr "legt Kennung und Befehlssatz fest, auf die der Kranz hört"
+
+#: lmu_led_config.py:375
+msgid "Automatic"
+msgstr "Automatisch"
 
 #: lmu_led_config.py:376
+msgid "R9 class and newer"
+msgstr "R9-Klasse und neuer"
+
+#: lmu_led_config.py:377
+msgid "R3/R5 class (older rims)"
+msgstr "R3/R5-Klasse (ältere Kränze)"
+
+#: lmu_led_config.py:382
 msgid "LED test"
 msgstr "LED-Test"
 
-#: lmu_led_config.py:377
+#: lmu_led_config.py:383
 msgid "play a sweep on the wheel"
 msgstr "Lauflicht auf dem Lenkrad abspielen"
 
-#: lmu_led_config.py:378
+#: lmu_led_config.py:384
 msgid "Start"
 msgstr "Starten"
 
-#: lmu_led_config.py:443
-#, python-brace-format
-msgid "Curve “{name}” applied"
-msgstr "Kennlinie „{name}“ übernommen"
-
-#: lmu_led_config.py:454
-msgid "Wait for the LED test to finish"
-msgstr "Erst den LED-Test abwarten"
-
-#: lmu_led_config.py:466
+#: lmu_led_config.py:465 lmu_led_config.py:495 lmu_led_config.py:801
 #, python-brace-format
 msgid "Wheel not reachable: {error}"
 msgstr "Lenkrad nicht erreichbar: {error}"
 
-#: lmu_led_config.py:473
+#: lmu_led_config.py:472
+#, python-brace-format
+msgid "Curve “{name}” applied"
+msgstr "Kennlinie „{name}“ übernommen"
+
+#: lmu_led_config.py:483
+msgid "Wait for the LED test to finish"
+msgstr "Erst den LED-Test abwarten"
+
+#: lmu_led_config.py:502
 msgid "Service paused — the slider drives the LEDs"
 msgstr "Dienst pausiert — der Regler steuert die LEDs"
 
-#: lmu_led_config.py:482
+#: lmu_led_config.py:511
 msgid "Simulation active — the LEDs follow the slider, not the game"
 msgstr "Simulation aktiv — die LEDs folgen dem Regler, nicht dem Spiel"
 
-#: lmu_led_config.py:484
+#: lmu_led_config.py:513
 msgid "Stop"
 msgstr "Beenden"
 
-#: lmu_led_config.py:532
+#: lmu_led_config.py:573
 msgid "The service has failed"
 msgstr "Der Dienst ist fehlgeschlagen"
 
-#: lmu_led_config.py:565
+#: lmu_led_config.py:606
 #, python-brace-format
 msgid "Simulation — {percent:.0f} % of maximum RPM"
 msgstr "Simulation — {percent:.0f} % der Maximaldrehzahl"
 
-#: lmu_led_config.py:585
+#: lmu_led_config.py:626
 #, python-brace-format
 msgid ""
 "{rpm} of {max} rpm  ·  {percent:.0f} %  ·  gear {gear}  ·  throttle "
@@ -388,49 +400,49 @@ msgstr ""
 "{rpm} von {max} U/min  ·  {percent:.0f} %  ·  Gang {gear}  ·  Gas "
 "{throttle:.0f} %"
 
-#: lmu_led_config.py:591
+#: lmu_led_config.py:632
 msgid "no telemetry — are you in the car?"
 msgstr "keine Telemetrie — sitzt du im Auto?"
 
-#: lmu_led_config.py:596
+#: lmu_led_config.py:637
 msgid "receiving telemetry"
 msgstr "Telemetrie wird empfangen"
 
-#: lmu_led_config.py:602
+#: lmu_led_config.py:643
 msgid "running, but no car on track"
 msgstr "läuft, aber kein Auto auf der Strecke"
 
-#: lmu_led_config.py:605
+#: lmu_led_config.py:646
 msgid "not started"
 msgstr "nicht gestartet"
 
-#: lmu_led_config.py:663
+#: lmu_led_config.py:701
 #, python-brace-format
 msgid "Colour scheme “{name}” applied"
 msgstr "Farbschema „{name}“ übernommen"
 
-#: lmu_led_config.py:724
+#: lmu_led_config.py:762
 #, python-brace-format
 msgid "{base} — {rpm} rpm"
 msgstr "{base} — {rpm} U/min"
 
-#: lmu_led_config.py:820
+#: lmu_led_config.py:858
 msgid "LED test running …"
 msgstr "LED-Test läuft …"
 
-#: lmu_led_config.py:824
+#: lmu_led_config.py:862
 msgid "Journal"
 msgstr "Journal"
 
-#: lmu_led_config.py:825
+#: lmu_led_config.py:863
 msgid "Service messages, live"
 msgstr "Meldungen des Dienstes, laufend"
 
-#: lmu_led_config.py:833
+#: lmu_led_config.py:871
 msgid "Close"
 msgstr "Schließen"
 
-#: moza.py:84
+#: moza.py:95
 msgid ""
 "No Moza wheelbase found. Is it switched on and connected? As a last resort, "
 "name the port in MOZA_SERIAL_PORT."
@@ -533,40 +545,44 @@ msgstr ""
 msgid "  <== MOVING"
 msgstr "  <== BEWEGT SICH"
 
-#: led_test.py:25
+#: led_test.py:35
 msgid "    Filling 1->10 ..."
 msgstr "    Aufbauen 1->10 ..."
 
-#: led_test.py:29
+#: led_test.py:39
 msgid "    Emptying 10->0 ..."
 msgstr "    Abbauen 10->0 ..."
 
-#: led_test.py:33
+#: led_test.py:43
 msgid "    Chase ..."
 msgstr "    Lauflicht ..."
 
-#: led_test.py:38
+#: led_test.py:48
 msgid "    Flashing (all) ..."
 msgstr "    Blinken (alle) ..."
 
-#: led_test.py:49
+#: led_test.py:59
 #, python-brace-format
-msgid "Port open: {path}"
-msgstr "Port offen: {path}"
+msgid "Port open: {path} (profile: {profile})"
+msgstr "Port offen: {path} (Profil: {profile})"
 
-#: led_test.py:50
+#: led_test.py:61
 msgid "Setting rpm-indicator-mode = 1 (external telemetry)"
 msgstr "Setze rpm-indicator-mode = 1 (externe Telemetrie)"
 
-#: led_test.py:54
+#: led_test.py:72
+msgid "LEGACY profile — old-send-telemetry (id 253/222) at the base id"
+msgstr "LEGACY-Profil — old-send-telemetry (id 253/222) an der Basis-Kennung"
+
+#: led_test.py:74
 msgid "PHASE 1 — new command (send-rpm-telemetry, id 26/0)"
 msgstr "PHASE 1 — neues Kommando (send-rpm-telemetry, id 26/0)"
 
-#: led_test.py:56
+#: led_test.py:76
 msgid "PHASE 2 — legacy command (old-send-telemetry, id 253/222)"
 msgstr "PHASE 2 — altes Kommando (old-send-telemetry, id 253/222)"
 
-#: led_test.py:58
+#: led_test.py:78
 msgid ""
 "\n"
 "Resetting rpm-indicator-mode to 0"
@@ -574,19 +590,19 @@ msgstr ""
 "\n"
 "Setze rpm-indicator-mode zurück auf 0"
 
-#: led_test.py:61
+#: led_test.py:81
 msgid "Done."
 msgstr "Fertig."
 
-#: led_map.py:32
+#: led_map.py:39
 msgid "PHASE 1: everything OFF — 6 seconds."
 msgstr "PHASE 1: alles AUS — 6 Sekunden."
 
-#: led_map.py:33
+#: led_map.py:40
 msgid "         Note which LEDs stay lit anyway."
 msgstr "         Merk dir, welche LEDs TROTZDEM leuchten."
 
-#: led_map.py:39
+#: led_map.py:46
 msgid ""
 "\n"
 "PHASE 2: one LED after another, bit 0 to 15."
@@ -594,18 +610,27 @@ msgstr ""
 "\n"
 "PHASE 2: eine LED nach der anderen, Bit 0 bis 15."
 
-#: led_map.py:40
+#: led_map.py:47
 msgid "         Count how many distinct LEDs light up"
 msgstr "         Zähl mit, wie viele verschiedene LEDs angehen"
 
-#: led_map.py:41
+#: led_map.py:48
 msgid "         and whether the run starts left or right.\n"
 msgstr "         und ob der Lauf links oder rechts beginnt.\n"
 
-#: led_map.py:49
+#: led_map.py:56
 msgid ""
 "\n"
 "Done — all off, mode reset."
 msgstr ""
 "\n"
 "Fertig — alles aus, Modus zurückgesetzt."
+
+#~ msgid "use the legacy telemetry command (id 253/222)"
+#~ msgstr "altes Telemetriekommando verwenden (id 253/222)"
+
+#~ msgid "Legacy telemetry command"
+#~ msgstr "Altes Telemetriekommando"
+
+#~ msgid "only needed if the bar stays dark"
+#~ msgstr "nur nötig, wenn der Balken dunkel bleibt"

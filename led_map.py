@@ -16,6 +16,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config
 import moza
 from i18n import _
 
@@ -23,9 +24,19 @@ HOLD = 1.2
 
 
 def main():
+    # --legacy forces the old command id on top of whatever profile says;
+    # --profile=... overrides the configured wheel generation.
     legacy = "--legacy" in sys.argv
-    with moza.MozaSerial() as m:
+    profile = config.load()["profile"]
+    for arg in sys.argv[1:]:
+        if arg.startswith("--profile="):
+            profile = arg.split("=", 1)[1]
+    with moza.MozaSerial(profile=profile) as m:
         m.set_indicator_mode(1)
+        if m.profile != "legacy":
+            # A fresh base has no colour table and lights every segment
+            # black; legacy rims keep theirs persistently — left alone.
+            m.set_rpm_colors()
         send = m.set_leds_legacy if legacy else m.set_leds
         time.sleep(0.3)
 

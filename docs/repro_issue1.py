@@ -34,8 +34,11 @@
 #       -> moza.py:45-48 (am eigenen R9 erlebt), Fix in
 #          lmu_rpm_leds.py:284-294 und lmu_led_config.py:649-658
 #
-# Gefuettert wird mit den EXAKTEN Frames, die led_test.py erzeugt
-# (os.write gestubbt, kein echter Port).
+# Gefuettert wird zweierlei (os.write gestubbt, kein echter Port):
+#  (1) der synthetisierte Frame-Strom von led_test.py, Stand v1.1.0 --
+#      die Version, die der Melder lief (alles fest an 23, keine Farben);
+#  (2) das HEUTIGE led_test.py unter --profile=modern und --profile=legacy,
+#      als Nachweis, dass der Fix vom 2026-10-02 beide Modelle erreicht.
 
 import os
 import sys
@@ -152,15 +155,48 @@ class ModernRim:
               f"{self.visible_changes}  schwarz-geleuchtet={self.black_lit}")
 
 
-# ---- (1) Die exakten Frames des Melders: led_test.py ----------------------
-captured.clear()
-import led_test  # noqa: E402
-led_test.main()
-frames_led_test = list(captured)
-print(f"led_test.py erzeugt {len(frames_led_test)} Frames; Geraete-IDs darin: "
-      f"{sorted({f[3] for f in frames_led_test})} (23=0x17, fest verdrahtet, moza.py:29)")
+# ---- (1) Die exakten Frames des Melders: led_test.py, Stand v1.1.0 --------
+# Seit 2026-10-02 ist led_test.py profilbewusst und setzt die Farbtabelle;
+# der Strom der Version, die der Melder lief, wird darum hier nachgebaut:
+# alles fest an Kennung 23, beide Modus-Kommandos, keine Farben.
+def v110_frames():
+    out = []
+    DEV = 0x17
 
-print("\n== Fuetterung mit led_test.py-Frames (das Szenario des Melders) ==")
+    def mode(v):
+        out.append(moza.build(63, DEV, [4], bytes([v])))
+        out.append(moza.build(63, DEV, [28, 0], bytes([v])))
+
+    def new(mask):
+        out.append(moza.build(63, DEV, [26, 0], int(mask).to_bytes(2, "little")))
+
+    def old(mask):
+        out.append(moza.build(65, DEV, [253, 222], int(mask).to_bytes(4, "big")))
+
+    mode(1)
+    for send in (new, old):                      # Phase 1 neu, Phase 2 alt
+        for i in range(moza.RPM_LEDS + 1):       # Aufbauen
+            send((1 << i) - 1)
+        for i in reversed(range(moza.RPM_LEDS + 1)):   # Abbauen
+            send((1 << i) - 1)
+        for _p in range(2):                      # Lauflicht
+            for i in range(moza.RPM_LEDS):
+                send(1 << i)
+        for _p in range(3):                      # Blinken
+            send((1 << moza.RPM_LEDS) - 1)
+            send(0)
+        send(0)
+    mode(0)
+    new(0)
+    return out
+
+
+frames_led_test = v110_frames()
+print(f"led_test.py (v1.1.0) erzeugt {len(frames_led_test)} Frames; Geraete-IDs"
+      f" darin: {sorted({f[3] for f in frames_led_test})} (23=0x17, damals fest"
+      f" verdrahtet)")
+
+print("\n== Fuetterung mit v1.1.0-Frames (das Szenario des Melders) ==")
 es = EsOnR5()
 for f in frames_led_test:
     es.feed(f)
@@ -194,11 +230,38 @@ for f in captured:
     modern2.feed(f)
 modern2.report("Moderner Kranz R9 ")
 
+# ---- (4) Der Fix vom 2026-10-02: heutiges led_test.py, beide Profile ------
+print("\n== Fix-Nachweis: heutiges led_test.py unter --profile=... ==")
+import led_test  # noqa: E402
+
+sys.argv = ["led_test.py", "--profile=modern"]
+captured.clear()
+led_test.main()
+modern3 = ModernRim()
+for f in captured:
+    modern3.feed(f)
+modern3.report("Moderner Kranz R9 ")
+
+sys.argv = ["led_test.py", "--profile=legacy"]
+captured.clear()
+led_test.main()
+es3 = EsOnR5()
+for f in captured:
+    es3.feed(f)
+es3.report("ES am R5 Pro      ")
+
+ok = (es.visible_changes == 0 and modern.visible_changes == 0
+      and modern3.visible_changes > 0 and modern3.black_lit == 0
+      and es3.visible_changes > 0 and es3.dead_queue_17 == 0)
+
 print("\nFazit:")
-print(" - led_test.py: auf BEIDEN Modellen 0 sichtbare Aenderungen -> Symptom")
-print("   des Issues reproduziert, aber aus ZWEI verschiedenen Gruenden:")
-print("   ES: alle 103 Frames an die falsche ID 23 (davon fuellen ~100 die")
+print(" - led_test.py v1.1.0: auf BEIDEN Modellen 0 sichtbare Aenderungen ->")
+print("   Symptom des Issues reproduziert, aus ZWEI verschiedenen Gruenden:")
+print("   ES: alle Frames an die falsche ID 23 (davon fuellen ~100 die")
 print("   Firmware-Queue der Base -> Power-Cycle-Empfehlung an den Melder!);")
 print("   moderner Kranz: Masken kommen an, leuchten aber schwarz (Farbtabelle).")
-print(" - Beide Gegenproben liefern sichtbare Aenderungen -> jede Hypothese")
-print("   hat einen konkreten, getrennten Fix.")
+print(" - Heutiges led_test.py: --profile=modern setzt die Farbtabelle und")
+print("   leuchtet sichtbar; --profile=legacy geht an Kennung 19 mit altem")
+print("   Befehlssatz, nichts verpufft mehr an 0x17.")
+print(f" - Gesamtergebnis: {'BESTANDEN' if ok else 'FEHLGESCHLAGEN'}")
+sys.exit(0 if ok else 1)

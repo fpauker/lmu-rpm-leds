@@ -77,15 +77,20 @@ bevor er weitertestet.
       2. Mini-Probe: Read `rpm-value1` (`7E 03 40 X 18 01 CS`) nacheinander an
          X = 23/21/19 — welche Kennung antwortet (Antwortgruppe 63–66 zählt)?
       3. Lief boxflat parallel, und haben die LEDs unter Pit House je geleuchtet?
-- [ ] Fix, zweistufig:
-      - Sofort-Diagnose: `led_test.py` bekommt **Phase 3 „legacy @ Kennung 19"**
-        (Modus-Frame + `CMD_OLD_SEND_TELEMETRY` an 19) und setzt in Phase 1
-        zusätzlich Farbtabelle + Helligkeit (wie `_claim_wheel`); dito led_map.
-      - Richtig: Kennung nicht hart verdrahten — `detect_wheel_id()` per
-        Read-Probe {23→21→19} (Antwortgruppe 63–66 genügt, wie boxflats
-        Parser-Hack) oder pragmatisch wie moza-rev über den by-id-Pfad
-        (`_R5_`/`_R3_` → Legacy an 19). Betrifft auch den Daemon.
-- [ ] Nach dem Fix: v1.2.0 (siehe PROJECT.md, Offen Nr. 3).
+- [x] Fix (umgesetzt 2026-10-02, Weg „moza-rev" statt Read-Probe):
+      **Profil `auto`/`modern`/`legacy`** in `moza.py` (`resolve_profile()`:
+      `_R3_`/`_R5_` im by-id-Namen → Legacy an Kennung 19, alte Befehlsfamilie
+      inkl. persistenter Farben `[21,0,n]`; sonst modern an 23). Wahlschalter
+      in der App („Wheelbase-Generation"), Config-Schlüssel `profile`
+      (migriert alten `legacy`-Schalter), Daemon `--profile`, Diagnose-Tools
+      `--profile=…`. led_test/led_map setzen im modernen Profil jetzt die
+      Farbtabelle; `led_test.py --profile=legacy` ist der Ein-Kommando-Test
+      für den Melder. Im Legacy-Profil wird **nur** `rpm-indicator-mode`
+      gesendet — kein Frame, der einen R5 wedgen kann.
+      Eine Read-Probe {23→21→19} bleibt verworfen, solange der Namens-Weg
+      nicht an realer Hardware scheitert.
+- [ ] Hardware-Bestätigung des Legacy-Pfads durch den Melder steht aus.
+- [ ] Nach der Bestätigung: v1.2.0 (siehe PROJECT.md, Offen Nr. 3).
 
 ## Reproduktion
 
@@ -94,9 +99,13 @@ bevor er weitertestet.
 zwei quellenbelegte Firmware-Modelle. Ergebnis (reproduzierbar, Exit 0):
 
 ```
-led_test.py:  ES am R5 Pro   akzeptiert=0    sichtbar=0   (alle 103 an falsche ID)
+led_test.py (v1.1.0, synthetisiert — die Version des Melders):
+              ES am R5 Pro   akzeptiert=0    sichtbar=0   (alle 103 an falsche ID)
               moderner Kranz akzeptiert=103  sichtbar=0   (42 Masken schwarz geleuchtet)
 Gegenproben:  legacy @ 19 → 11 sichtbar;  Mode+Farben+Helligkeit → 10 sichtbar
+Fix-Nachweis (heutiges led_test.py):
+              --profile=modern → 46 sichtbar, 0 schwarz
+              --profile=legacy → 46 sichtbar an Kennung 19, 0 an 0x17 verpufft
 ```
 
 **Am eigenen R9 (live, 2026-10-02):** identischer Sweep dreimal — mit

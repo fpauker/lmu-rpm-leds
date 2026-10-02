@@ -26,8 +26,16 @@ from i18n import _
 MSG_START = 0x7E
 MAGIC = 13
 
-DEV_WHEEL = 23
+DEV_WHEEL = 23   # modern rims (R9-class bases) answer here
+DEV_BASE = 19    # legacy rims (ES on R3/R5 bases): the base proxies to the rim
 DEV_DASH = 20
+
+# Which protocol family and device id to talk to. "auto" decides from the
+# base's USB name, the same heuristic moza-rev uses and confirmed on hardware
+# there: an R3/R5-generation base carries an old-protocol rim behind the base
+# id, everything else is a modern rim at the wheel id. boxflat reaches the
+# same end state by cycling ids {23, 21, 19} until a read answers.
+PROFILES = ("auto", "modern", "legacy")
 
 # group, cmd_id, payload_len
 CMD_SEND_RPM_TELEMETRY = (63, [26, 0], 2)  # wheel, new protocol: LED bitmask
@@ -37,6 +45,9 @@ CMD_TELEMETRY_MODE = (63, [28, 0], 1)  # current rims: 1 = external telemetry
 CMD_TELEMETRY_RPM_COLORS = (63, [25, 0], 20)  # 5 LEDs per frame, 2 frames
 CMD_RPM_BRIGHTNESS = (63, [27, 0, 255], 1)     # current rims, percent
 CMD_OLD_RPM_BRIGHTNESS = (63, [20, 0], 1)      # legacy rims
+# Legacy rims store their colours persistently, one frame per LED:
+# group 63, id [21, 0, n], 3 bytes RGB (boxflat: old-rpm-color1..10).
+CMD_OLD_RPM_COLOR_BASE_ID = [21, 0]
 CMD_RPM_DISPLAY_MODE = (63, [7], 1)
 CMD_DASH_SEND_TELEMETRY = (65, [253, 222], 4)
 
@@ -85,6 +96,19 @@ def find_base(pattern: str = None) -> str:
         "As a last resort, name the port in MOZA_SERIAL_PORT."))
 
 
+def resolve_profile(profile: str, path: str) -> str:
+    """Turn "auto" into "modern" or "legacy" using the base's USB name.
+
+    An R3/R5-generation base ("_R3_"/"_R5_" in the by-id name, which also
+    matches "R5_Pro") carries an old-protocol rim addressed via the base id —
+    lesson of issue #1, where every frame sent to the wheel id vanished.
+    """
+    if profile in ("modern", "legacy"):
+        return profile
+    name = os.path.basename(path or "").lower()
+    return "legacy" if ("_r3_" in name or "_r5_" in name) else "modern"
+
+
 class MozaSerial:
     """Write-only handle on the wheelbase serial port.
 
@@ -92,8 +116,13 @@ class MozaSerial:
     once — but boxflat may overwrite settings it manages.
     """
 
-    def __init__(self, path: str = None):
+    def __init__(self, path: str = None, profile: str = "auto"):
         self.path = path or find_base()
+        # The rim's address and command family are a property of the base
+        # generation, so they are fixed when the port is opened. Changing the
+        # profile means reopening.
+        self.profile = resolve_profile(profile, self.path)
+        self.dev_id = DEV_BASE if self.profile == "legacy" else DEV_WHEEL
         self.fd = os.open(self.path, os.O_RDWR | os.O_NOCTTY)
         self._configure()
 
@@ -136,15 +165,21 @@ class MozaSerial:
         was pressed — that test sets only telemetry-mode, and sending the
         legacy command after it evidently put the rim back under the base's own
         control.
+
+        A legacy rim gets only its own command: telemetry-mode does not exist
+        there, and issue #1 showed an R5 base can wedge on frames it does not
+        know.
         """
-        self.send(CMD_RPM_INDICATOR_MODE, DEV_WHEEL, mode)
-        self.send(CMD_TELEMETRY_MODE, DEV_WHEEL, mode)
+        self.send(CMD_RPM_INDICATOR_MODE, self.dev_id, mode)
+        if self.profile != "legacy":
+            self.send(CMD_TELEMETRY_MODE, self.dev_id, mode)
 
     def set_rpm_colors(self, colors=None):
         """Colour table for the rev LEDs, five per frame.
 
         Layout per entry is (index, r, g, b); the base wants two frames of
-        twenty bytes, LEDs 0-4 then 5-9.
+        twenty bytes, LEDs 0-4 then 5-9. A legacy rim instead takes one frame
+        of plain RGB per LED and stores the table persistently.
         """
         colors = [palette.parse(c) for c in (colors or DEFAULT_RPM_COLORS)][:RPM_LEDS]
         while len(colors) < RPM_LEDS:
@@ -152,27 +187,37 @@ class MozaSerial:
             # ramp with a foreign red would put stray colours on LEDs the rim
             # may well light.
             colors.append(colors[-1] if colors else DEFAULT_RPM_COLORS[-1])
+        if self.profile == "legacy":
+            for index, rgb in enumerate(colors):
+                cmd = (63, CMD_OLD_RPM_COLOR_BASE_ID + [index], 3)
+                self.send_bytes(cmd, self.dev_id, bytes(rgb))
+            return
         flat = bytearray()
         for index, (r, g, b) in enumerate(colors):
             flat.extend((index, r, g, b))
         for half in (flat[:20], flat[20:40]):
-            self.send_bytes(CMD_TELEMETRY_RPM_COLORS, DEV_WHEEL, bytes(half))
+            self.send_bytes(CMD_TELEMETRY_RPM_COLORS, self.dev_id, bytes(half))
 
-    def set_rpm_brightness(self, percent: int, legacy: bool = False):
+    def set_rpm_brightness(self, percent: int):
         """Rim brightness in percent. Same two-generation split as the mode."""
-        cmd = CMD_OLD_RPM_BRIGHTNESS if legacy else CMD_RPM_BRIGHTNESS
-        self.send(cmd, DEV_WHEEL, max(0, min(100, int(percent))))
+        cmd = (CMD_OLD_RPM_BRIGHTNESS if self.profile == "legacy"
+               else CMD_RPM_BRIGHTNESS)
+        self.send(cmd, self.dev_id, max(0, min(100, int(percent))))
 
-    def set_leds(self, mask: int, endian: str = "little"):
+    def set_leds(self, mask: int):
         """Light LEDs by bitmask — bit 0 is the leftmost of 10.
 
         The wheel takes the 16-bit mask little-endian; sending it big-endian
-        splits the bar into two halves at the byte boundary.
+        splits the bar into two halves at the byte boundary. The legacy
+        command, by contrast, is four bytes big-endian.
         """
-        self.send(CMD_SEND_RPM_TELEMETRY, DEV_WHEEL, mask, endian)
+        if self.profile == "legacy":
+            self.set_leds_legacy(mask)
+        else:
+            self.send(CMD_SEND_RPM_TELEMETRY, self.dev_id, mask, "little")
 
     def set_leds_legacy(self, mask: int):
-        self.send(CMD_OLD_SEND_TELEMETRY, DEV_WHEEL, mask)
+        self.send(CMD_OLD_SEND_TELEMETRY, self.dev_id, mask)
 
     def close(self):
         os.close(self.fd)

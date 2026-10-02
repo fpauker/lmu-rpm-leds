@@ -242,12 +242,23 @@ class Wheel:
     # seconds at a stretch while driving.
     REASSERT = 2.0
 
-    def __init__(self):
+    def __init__(self, profile="auto"):
         self._port = None
+        self._profile = profile
         self._next_try = 0.0
         self._next_assert = 0.0
         self._complained = False
         self._appearance = None    # (colours, brightness) the rim should show
+
+    def set_profile(self, profile):
+        """Wheel generation from the config. A change reopens the port,
+        because the device id is decided when it is opened — and the LEDs are
+        handed back first, under the identity they were claimed with."""
+        if profile == self._profile:
+            return
+        self._profile = profile
+        self.close()
+        self._next_try = 0.0
 
     def _ensure(self):
         if self._port is not None:
@@ -257,9 +268,10 @@ class Wheel:
             return False
         self._next_try = now + self.RETRY
         try:
-            self._port = moza.MozaSerial()
+            self._port = moza.MozaSerial(profile=self._profile)
             self._assert_mode()
-            print(_("Wheel connected: {path}").format(path=self._port.path))
+            print(_("Wheel connected: {path} (profile: {profile})").format(
+                path=self._port.path, profile=self._port.profile))
             self._complained = False
             return True
         except OSError as exc:
@@ -293,17 +305,14 @@ class Wheel:
             self._port.set_rpm_colors()
         self._next_assert = time.monotonic() + self.REASSERT
 
-    def send(self, mask, legacy=False):
+    def send(self, mask):
         """True if the frame went out."""
         if not self._ensure():
             return False
         try:
             if time.monotonic() >= self._next_assert:
                 self._assert_mode()
-            if legacy:
-                self._port.set_leds_legacy(mask)
-            else:
-                self._port.set_leds(mask)
+            self._port.set_leds(mask)
             return True
         except OSError as exc:
             print(_("Wheel lost ({error}) — reconnecting.").format(error=exc))
@@ -373,8 +382,9 @@ def main():
     ap.add_argument("--blink", type=float,
                     help=_("fraction where the bar starts flashing (shift point)"))
     ap.add_argument("--rate", type=float, help=_("updates per second"))
-    ap.add_argument("--legacy", action="store_true", default=None,
-                    help=_("use the legacy telemetry command (id 253/222)"))
+    ap.add_argument("--profile", choices=moza.PROFILES, default=None,
+                    help=_("wheel generation: modern (R9 class), "
+                           "legacy (R3/R5 class), or auto"))
     ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -391,7 +401,7 @@ def main():
     # the signal into SystemExit makes it pass through the finally block.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
 
-    wheel = Wheel()
+    wheel = Wheel(cfg["profile"])
 
     def apply_appearance():
         wheel.set_appearance(palette.ramp(cfg["colors"], cfg["leds"]),
@@ -402,7 +412,7 @@ def main():
     def send(mask):
         """Returns the mask to remember: None when the frame did not go out,
         so the next pass resends it once the wheel is back."""
-        return mask if wheel.send(mask, cfg["legacy"]) else None
+        return mask if wheel.send(mask) else None
 
     tele = None
     last_mask = None
@@ -425,6 +435,7 @@ def main():
                 last_cfg_poll = now
                 if watcher.poll():
                     cfg = dict(watcher.config, **overrides)
+                    wheel.set_profile(cfg["profile"])
                     apply_appearance()
                     last_mask = None  # force a resend under the new curve
                     print(_("\nCurve reloaded: start={start:.2f} end={end:.2f} "

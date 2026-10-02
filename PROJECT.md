@@ -40,15 +40,22 @@ Quellordner:
   Helligkeit, Füllrichtung beidseitig, Gang-Anpassung mit Ausnahme für den
   höchsten Gang (`mMaxGears`, live an einem vollen Feld bestätigt),
   Deutsch/Englisch per gettext.
+- Seit 2026-10-02: **Profil-Wahlschalter** (`profile`: auto/modern/legacy) in
+  App, Daemon und Diagnose-Tools — schaltet Gerätekennung (23 ↔ 19) und
+  Befehlsfamilie um, `auto` entscheidet nach dem USB-Namen (`_R3_`/`_R5_` →
+  legacy). Alter Schlüssel `legacy` wird beim Laden migriert. Moderner Pfad am
+  R9 verifiziert; **Legacy-Pfad nur auf Frame-Ebene getestet** (kein R3/R5
+  vorhanden), Hardware-Bestätigung müsste vom Issue-#1-Melder kommen.
 - **Tag `v1.1.0` hängt 8 Commits hinter `main`** (Farben, Gang-Anpassung,
   Top-Gang-Fix, Diversen). Die RPM-Spec baut aus dem Tag-Tarball — ein heute
   gebautes Paket hätte diese Features nicht. `v1.2.0` steht aus.
 - COPR ist vorbereitet (packaging/lmu-rpm-leds.spec, Dateiliste gegen
   DESTDIR-Installation abgeglichen), aber **kein COPR-Projekt angelegt** —
   das braucht das Fedora-Konto des Besitzers.
-- Bekannter Defekt, Gegenstand von Issue #1: `led_test.py` und `led_map.py`
-  setzen **keine Farbtabelle** → auf frisch eingeschalteter Base läuft der
-  Test unsichtbar durch. Details: [docs/issue-1-untersuchung.md](docs/issue-1-untersuchung.md).
+- Die Farbtabellen-Lücke aus Issue #1 ist seit 2026-10-02 geschlossen:
+  `led_test.py` und `led_map.py` setzen im modernen Profil die Tabelle
+  (im Legacy-Profil absichtlich nicht — dort ist sie persistent im Kranz).
+  Details: [docs/issue-1-untersuchung.md](docs/issue-1-untersuchung.md).
 
 ## Entscheidungen (und verworfene Wege)
 
@@ -84,9 +91,10 @@ Quellordner:
    live reproduziert, ES-Frage offen; Stand und nächste Schritte in
    [docs/issue-1-untersuchung.md](docs/issue-1-untersuchung.md). Antworten auf
    GitHub auf Englisch, nur nach Freigabe des Besitzers posten.
-2. Fix dazu: `led_test.py`/`led_map.py` müssen Farbtabelle + Helligkeit setzen
-   (wie `_claim_wheel()` in der App) — bewusst noch nicht umgesetzt, bis die
-   ES-Frage geklärt ist (evtl. gehört Gerätekennung 21/23 in denselben Fix).
+2. ~~Fix dazu: Farbtabelle in den Diagnose-Tools~~ seit 2026-10-02 umgesetzt,
+   zusammen mit dem Profil-Wahlschalter (Kennung 19 ↔ 23). Offen bleibt die
+   Hardware-Bestätigung des Legacy-Pfads durch den Issue-#1-Melder —
+   `led_test.py --profile=legacy` wäre dessen Ein-Kommando-Test.
 3. `v1.2.0` taggen + Spec-Version und AppStream-Release nachziehen, dann COPR.
 4. Helligkeit/Farben gelten nur für den Kranz; `rpm-blink-color*` (eigene
    Blinkfarbe) wäre möglich, war aber nie gefordert.

@@ -96,7 +96,7 @@ where each threshold sits.
 | `colors` | three stops — low, middle, shift point — as `#rrggbb` | green/amber/red |
 | `brightness` | rim brightness in percent | 100 |
 | `adaptive` | scale the curve to what each gear actually revs to | true |
-| `legacy` | use the older telemetry command id | false |
+| `profile` | wheel generation: `auto`, `modern` (R9 class), `legacy` (R3/R5 class) | `auto` |
 | `enabled` | feed the LEDs at all | true |
 
 Settings live in `~/.config/lmu-rpm-leds/config.json`. The daemon notices
@@ -250,8 +250,11 @@ banner while it is active.
 the game is actually running a session. If it persists, the diagnostic tools
 below will show what is in memory.
 
-**Nothing lights up at all.** Check the udev rule first, then try the `legacy`
-setting — older rims use a different telemetry command.
+**Nothing lights up at all.** Check the udev rule first, then the **Wheelbase
+generation** selector. R3/R5-class bases carry a rim that listens on the
+base's own device id with the older command set; `auto` picks that from the
+USB name, but it can be forced with `legacy`. On R9-class bases `modern` is
+the right choice.
 
 The diagnostic tools are installed alongside the modules and are run with an
 explicit interpreter:

@@ -12,6 +12,7 @@ half-written file — the daemon reads this at 50 Hz.
 import json
 import os
 
+import moza
 import palette
 
 APP_NAME = "lmu-rpm-leds"
@@ -27,7 +28,7 @@ DEFAULTS = {
     "adaptive": True,   # scale the curve to what each gear actually revs to
     "colors": list(palette.DEFAULT_STOPS),   # three stops: low, middle, shift
     "brightness": 100,  # percent
-    "legacy": False,    # use the old telemetry command id
+    "profile": "auto",  # wheel generation: device id + command family
     "enabled": True,    # feed the LEDs at all
 }
 
@@ -76,6 +77,13 @@ def sanitise(raw):
 
     if cfg["mode"] not in MODES:
         cfg["mode"] = DEFAULTS["mode"]
+    if cfg["profile"] not in moza.PROFILES:
+        cfg["profile"] = DEFAULTS["profile"]
+    # Up to v1.1 there was only a "legacy" switch for the old telemetry
+    # command. Anyone who had it on was talking to an old rim, which is
+    # exactly what the legacy profile now addresses properly.
+    if isinstance(raw, dict) and "profile" not in raw and raw.get("legacy"):
+        cfg["profile"] = "legacy"
 
     # Outside the block above on purpose, so a missing or unreadable file still
     # comes back with three usable stops — and with a list of its own, since

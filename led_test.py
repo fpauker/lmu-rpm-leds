@@ -16,8 +16,18 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config
 import moza
 from i18n import _
+
+
+def profile_from_argv():
+    """The configured wheel profile, unless --profile=... says otherwise."""
+    profile = config.load()["profile"]
+    for arg in sys.argv[1:]:
+        if arg.startswith("--profile="):
+            profile = arg.split("=", 1)[1]
+    return profile
 
 
 def sweep(send, label):
@@ -45,15 +55,25 @@ def sweep(send, label):
 
 
 def main():
-    with moza.MozaSerial() as m:
-        print(_("Port open: {path}").format(path=m.path))
+    with moza.MozaSerial(profile=profile_from_argv()) as m:
+        print(_("Port open: {path} (profile: {profile})").format(
+            path=m.path, profile=m.profile))
         print(_("Setting rpm-indicator-mode = 1 (external telemetry)"))
         m.set_indicator_mode(1)
+        if m.profile != "legacy":
+            # Without a colour table a fresh base lights every segment black.
+            # Legacy rims keep their colours persistently, so the test leaves
+            # those alone — boxflat's own legacy test does the same.
+            m.set_rpm_colors()
         time.sleep(0.3)
 
-        sweep(m.set_leds, _("PHASE 1 — new command (send-rpm-telemetry, id 26/0)"))
-        time.sleep(1.0)
-        sweep(m.set_leds_legacy, _("PHASE 2 — legacy command (old-send-telemetry, id 253/222)"))
+        if m.profile == "legacy":
+            sweep(m.set_leds,
+                  _("LEGACY profile — old-send-telemetry (id 253/222) at the base id"))
+        else:
+            sweep(m.set_leds, _("PHASE 1 — new command (send-rpm-telemetry, id 26/0)"))
+            time.sleep(1.0)
+            sweep(m.set_leds_legacy, _("PHASE 2 — legacy command (old-send-telemetry, id 253/222)"))
 
         print(_("\nResetting rpm-indicator-mode to 0"))
         m.set_indicator_mode(0)

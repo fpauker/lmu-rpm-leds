@@ -367,11 +367,17 @@ class Window(Adw.ApplicationWindow):
         self.row_leds = self._spin(_("LEDs in the rim"), _("number of segments"), 1, 16, 1)
         group.add(self.row_leds)
 
-        self.row_legacy = Adw.SwitchRow(
-            title=_("Legacy telemetry command"),
-            subtitle=_("only needed if the bar stays dark"))
-        self.row_legacy.connect("notify::active", self._on_widget_changed)
-        group.add(self.row_legacy)
+        # Order matches moza.PROFILES: auto, modern, legacy.
+        self.row_profile = Adw.ComboRow(
+            title=_("Wheelbase generation"),
+            subtitle=_("sets the device id and command set the rim listens on"),
+            model=Gtk.StringList.new([
+                _("Automatic"),
+                _("R9 class and newer"),
+                _("R3/R5 class (older rims)"),
+            ]))
+        self.row_profile.connect("notify::selected", self._on_widget_changed)
+        group.add(self.row_profile)
 
         test = Adw.ActionRow(title=_("LED test"),
                              subtitle=_("play a sweep on the wheel"))
@@ -400,7 +406,7 @@ class Window(Adw.ApplicationWindow):
         self.row_blink_hz.set_value(self.cfg["blink_hz"])
         self.row_rate.set_value(self.cfg["rate"])
         self.row_leds.set_value(self.cfg["leds"])
-        self.row_legacy.set_active(self.cfg["legacy"])
+        self.row_profile.set_selected(moza.PROFILES.index(self.cfg["profile"]))
         self.row_mode.set_selected(config.MODES.index(self.cfg["mode"]))
         self.row_adaptive.set_active(self.cfg["adaptive"])
         self.row_brightness.set_value(self.cfg["brightness"])
@@ -428,13 +434,36 @@ class Window(Adw.ApplicationWindow):
             "blink_hz": self.row_blink_hz.get_value(),
             "rate": self.row_rate.get_value(),
             "leds": int(self.row_leds.get_value()),
-            "legacy": self.row_legacy.get_active(),
+            "profile": moza.PROFILES[self.row_profile.get_selected()],
             "mode": config.MODES[self.row_mode.get_selected()],
             "adaptive": self.row_adaptive.get_active(),
             "brightness": self.row_brightness.get_value(),
         })
         self.cfg = config.save(self.cfg)
+        self._follow_profile()
         self._redraw()
+
+    def _follow_profile(self):
+        """Reopen the simulation's port when the selector changes the device
+        id — that is fixed when the port is opened, so the open handle would
+        keep talking to the old address."""
+        wheel = self._sim_wheel
+        if not wheel:
+            return
+        if wheel.profile == moza.resolve_profile(self.cfg["profile"], wheel.path):
+            return
+        try:
+            wheel.set_leds(0)
+            wheel.close()
+        except OSError:
+            pass
+        try:
+            self._sim_wheel = moza.MozaSerial(profile=self.cfg["profile"])
+            self._claim_wheel(self._sim_wheel)
+        except OSError as exc:
+            self._sim_wheel = None
+            self._toast(_("Wheel not reachable: {error}").format(error=exc))
+            self.row_sim.set_active(False)   # runs _release_sim via the toggle
 
     def _on_preset(self, _btn, name):
         self.cfg.update(PRESETS[name])
@@ -458,7 +487,7 @@ class Window(Adw.ApplicationWindow):
             # Take the wheel from the daemon, then open the port ourselves.
             config.pause(3.0)
             try:
-                self._sim_wheel = moza.MozaSerial()
+                self._sim_wheel = moza.MozaSerial(profile=self.cfg["profile"])
                 self._claim_wheel(self._sim_wheel)
             except OSError as exc:
                 self._sim_wheel = None
@@ -632,10 +661,7 @@ class Window(Adw.ApplicationWindow):
 
         if self._sim_wheel and self.row_sim.get_active():
             try:
-                if cfg["legacy"]:
-                    self._sim_wheel.set_leds_legacy(mask)
-                else:
-                    self._sim_wheel.set_leds(mask)
+                self._sim_wheel.set_leds(mask)
             except OSError:
                 self._release_sim()
 
@@ -768,11 +794,11 @@ class Window(Adw.ApplicationWindow):
 
         config.pause(4.0)
         try:
-            wheel = moza.MozaSerial()
+            wheel = moza.MozaSerial(profile=self.cfg["profile"])
             self._claim_wheel(wheel)
         except OSError as exc:
             config.unpause()
-            self._toast(f"Lenkrad nicht erreichbar: {exc}")
+            self._toast(_("Wheel not reachable: {error}").format(error=exc))
             return
 
         self._testing = True
