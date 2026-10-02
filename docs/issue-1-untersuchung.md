@@ -43,42 +43,63 @@ Farbtabelle 25/0) ignoriert das ES komplett. Quellen:
   IDs for some reason". Boxflats ES-Erkennung ist faktisch „antwortet nicht
   auf 23".
 
-Unser Code sendet alles hart an `DEV_WHEEL = 23` (moza.py) — beim Melder kommt
-also **gar nichts** am LED-Controller an. Das erklärt sein Symptom unabhängig
-von Punkt 1/2.
+Entscheidend dabei: `led_test.py` sendet die **richtigen Legacy-Frames längst**
+(Phase 2, Gruppe 65, id 253/222 — deckungsgleich mit boxflats wheel_old-Test).
+Der Alleintäter ist die **Gerätekennung**: alles geht hart an `DEV_WHEEL = 23`
+(moza.py), das ES am R5 hört auf 19. Beide Phasen verpuffen. Maintainer-Zitate:
+boxflat #126 „ALL wheels received the new settings, apart from ES wheel",
+#33 „it seems like it somehow works with base ids". Und: Im alten Protokoll
+sind die Farben **persistent im Kranz gespeichert** (`old-rpm-color1..10`) —
+boxflats eigener funktionierender Legacy-Test sendet gar keine Farbtabelle.
+Die Farbtabellen-Lücke ist also ein reiner Neu-Protokoll-Bug (R9-Klasse).
 
 **4. Warnung:** moza-rev wörtlich: *„Sending to 0x17 fills some firmware queue
 and eventually locks the base requiring a power cycle."* led_test.py hat beim
 Melder ~90 Frames an 0x17 geschickt → ihm **Base aus-/einschalten** empfehlen,
 bevor er weitertestet.
 
-## Ursachen-Rangliste für den Melder
+## Ursachen-Rangliste für den Melder (Urteil vom 2026-10-02)
 
-1. **Falsche Kennung + falsche Protokollfamilie** (ES → Legacy-Kommandos an
-   Base-ID 19). Primärursache; erklärt „keine LED ändert sich" vollständig.
-2. **Fehlende Farbtabelle in led_test.py** — beim Melder nachrangig (seine
-   Frames kommen ohnehin nicht an), auf modernen Kränzen (R9-Klasse) aber
-   derselbe Totalausfall des Tests; live bewiesen, siehe oben.
+| # | Ursache | P | Status |
+|---|---|---|---|
+| 1 | **Falsche Gerätekennung: alles an 23, ES am R5 hört auf 19.** Beide Phasen verpuffen. | ~75 % | bewiesen, dass wir nur an 23 senden; belegt (moza-rev hardware-bestätigt, boxflat #33/#151), dass ES@R5 auf 19 hört |
+| 2 | ES versteht das neue Protokoll nicht → Phase 1 prinzipiell wirkungslos | ~95 % wahr, erklärt aber allein nur Phase 1 | belegt (boxflat #126/#130, AZOM) |
+| 3 | Fehlende Farbtabelle in led_test.py | ~10 % als Ursache HIER (Legacy-Farben sind persistent) | als Lücke bewiesen; trifft moderne Kränze (R9-Klasse) voll — dort live vorgeführt |
+| 4 | Modus-Feinheiten (moza-rev: Gruppe 0x40 an Base) / boxflat parallel / Defekt | klein | Vermutung; boxflats Testknopf klärt es |
 
 ## Nächste Schritte
 
-- [ ] Urteils-Lauf der Untersuchung einarbeiten, falls er die Rangliste ändert
-      (lief bei Redaktionsschluss noch).
-- [ ] Rückfragen an den Melder (englisch, nach Freigabe): (a) Base einmal
-      aus-/einschalten (Queue-Warnung!), (b) leuchten die LEDs in boxflats
-      eigenem RPM-Test?, (c) `ls /dev/serial/by-id/` — zur Bestätigung des
-      `_r5_`-Musters.
-- [ ] Fix-Skizze: `led_test.py`/`led_map.py` setzen Farbtabelle + Helligkeit
-      (wie `_claim_wheel`); zusätzlich Legacy-/Kennungs-Pfad für R3/R5-Basen —
-      Erkennung über by-id-Pfad wie moza-rev (`_r5_`/`_r3_` → Legacy an 19)
-      oder Probe-Zyklus wie boxflat (23→21→19). Betrifft dann auch den Daemon
-      (`moza.py` Kennung/Kommandowahl), nicht nur die Testskripte.
+- [ ] Rückfragen an den Melder (englisch, nach Freigabe), in dieser Reihenfolge:
+      1. **Base aus-/einschalten** (Queue-Warnung!), dann: boxflat öffnen —
+         siehst du „Wheel" oder „Wheel (old)"? RPM-Testknopf drücken: leuchten
+         die LEDs? (trennt Hardware-Defekt von Software UND verrät die
+         Protokollfamilie; ausgegrauter Stick-Mode = Kennung ≠ 23)
+      2. Mini-Probe: Read `rpm-value1` (`7E 03 40 X 18 01 CS`) nacheinander an
+         X = 23/21/19 — welche Kennung antwortet (Antwortgruppe 63–66 zählt)?
+      3. Lief boxflat parallel, und haben die LEDs unter Pit House je geleuchtet?
+- [ ] Fix, zweistufig:
+      - Sofort-Diagnose: `led_test.py` bekommt **Phase 3 „legacy @ Kennung 19"**
+        (Modus-Frame + `CMD_OLD_SEND_TELEMETRY` an 19) und setzt in Phase 1
+        zusätzlich Farbtabelle + Helligkeit (wie `_claim_wheel`); dito led_map.
+      - Richtig: Kennung nicht hart verdrahten — `detect_wheel_id()` per
+        Read-Probe {23→21→19} (Antwortgruppe 63–66 genügt, wie boxflats
+        Parser-Hack) oder pragmatisch wie moza-rev über den by-id-Pfad
+        (`_R5_`/`_R3_` → Legacy an 19). Betrifft auch den Daemon.
 - [ ] Nach dem Fix: v1.2.0 (siehe PROJECT.md, Offen Nr. 3).
 
-## Reproduktion für später
+## Reproduktion
 
-Am eigenen R9 (neues Protokoll): Farbtabelle schwärzen → Sweep unsichtbar →
-Tabelle setzen → sichtbar. Dreiphasen-Skript steht in der Sitzungshistorie vom
-2026-10-02; Kern: `w.set_rpm_colors([(0,0,0)]*10)` vor dem Sweep. Für den
-ES-Fall gibt es ohne ES-Hardware keine Live-Reproduktion — nur den
-Frame-Beweis, dass an 19/Legacy nichts gesendet wird.
+**Ohne Hardware:** [`docs/repro_issue1.py`](repro_issue1.py) — stubbt
+`os.write`, lässt das echte `led_test.main()` laufen und füttert die Frames in
+zwei quellenbelegte Firmware-Modelle. Ergebnis (reproduzierbar, Exit 0):
+
+```
+led_test.py:  ES am R5 Pro   akzeptiert=0    sichtbar=0   (alle 103 an falsche ID)
+              moderner Kranz akzeptiert=103  sichtbar=0   (42 Masken schwarz geleuchtet)
+Gegenproben:  legacy @ 19 → 11 sichtbar;  Mode+Farben+Helligkeit → 10 sichtbar
+```
+
+**Am eigenen R9 (live, 2026-10-02):** identischer Sweep dreimal — mit
+geschwärzter Tabelle (`w.set_rpm_colors([(0,0,0)]*10)`) unsichtbar, mit
+richtiger Tabelle sichtbar. Für den ES-Fall selbst gibt es ohne ES-Hardware
+keine Live-Reproduktion, nur das Modell oben.
